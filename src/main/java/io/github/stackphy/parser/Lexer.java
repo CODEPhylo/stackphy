@@ -8,44 +8,109 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Lexer for the StackPhy language.
+ * Lexer for the PhyloSpec-compatible StackPhy language.
  * Converts source code into tokens.
  */
 public class Lexer {
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("^[+-]?([0-9]*[.])?[0-9]+");
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("^[+-]?([0-9]*[.])?[0-9]+([eE][+-]?[0-9]+)?");
     private static final Pattern STRING_PATTERN = Pattern.compile("^\"([^\"\\\\]|\\\\.)*\"");
+    private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("^\\s+");
     private static final Pattern COMMENT_PATTERN = Pattern.compile("^//.*");
     
     private static final Map<String, TokenType> KEYWORDS = new HashMap<>();
     
     static {
-        // Operators
+        // Variable operations
         KEYWORDS.put("var", TokenType.VAR);
         KEYWORDS.put("observe", TokenType.OBSERVE);
+        KEYWORDS.put("constraint", TokenType.CONSTRAINT);
         
         // Base operations
         KEYWORDS.put("dup", TokenType.DUP);
         KEYWORDS.put("swap", TokenType.SWAP);
         KEYWORDS.put("drop", TokenType.DROP);
         
+        // Constraint types
+        KEYWORDS.put("lessThan", TokenType.LESS_THAN);
+        KEYWORDS.put("LessThan", TokenType.LESS_THAN);
+        KEYWORDS.put("greaterThan", TokenType.GREATER_THAN);
+        KEYWORDS.put("GreaterThan", TokenType.GREATER_THAN);
+        KEYWORDS.put("equals", TokenType.EQUALS);
+        KEYWORDS.put("Equals", TokenType.EQUALS);
+        KEYWORDS.put("bounded", TokenType.BOUNDED);
+        KEYWORDS.put("Bounded", TokenType.BOUNDED);
+        KEYWORDS.put("sumTo", TokenType.SUM_TO);
+        KEYWORDS.put("SumTo", TokenType.SUM_TO);
+        KEYWORDS.put("monophyly", TokenType.MONOPHYLY);
+        KEYWORDS.put("Monophyly", TokenType.MONOPHYLY);
+        KEYWORDS.put("calibration", TokenType.CALIBRATION);
+        KEYWORDS.put("Calibration", TokenType.CALIBRATION);
+        
         // Distribution operations
-        KEYWORDS.put("normal", TokenType.NORMAL);
-        KEYWORDS.put("lognormal", TokenType.LOGNORMAL);
-        KEYWORDS.put("exponential", TokenType.EXPONENTIAL);
-        KEYWORDS.put("dirichlet", TokenType.DIRICHLET);
-        KEYWORDS.put("gamma", TokenType.GAMMA);
-        KEYWORDS.put("yule", TokenType.YULE);
-        KEYWORDS.put("birthDeath", TokenType.BIRTH_DEATH);
-        KEYWORDS.put("coalescent", TokenType.COALESCENT);
+        KEYWORDS.put("Normal", TokenType.NORMAL);
+        KEYWORDS.put("LogNormal", TokenType.LOGNORMAL);
+        KEYWORDS.put("Exponential", TokenType.EXPONENTIAL);
+        KEYWORDS.put("Gamma", TokenType.GAMMA);
+        KEYWORDS.put("Beta", TokenType.BETA);
+        KEYWORDS.put("Dirichlet", TokenType.DIRICHLET);
+        KEYWORDS.put("Uniform", TokenType.UNIFORM);
         
-        // Model operations
-        KEYWORDS.put("hky", TokenType.HKY);
-        KEYWORDS.put("gtr", TokenType.GTR);
-        KEYWORDS.put("phyloCTMC", TokenType.PHYLO_CTMC);
+        // Tree distributions
+        KEYWORDS.put("Yule", TokenType.YULE);
+        KEYWORDS.put("BirthDeath", TokenType.BIRTH_DEATH);
+        KEYWORDS.put("Coalescent", TokenType.COALESCENT);
+        KEYWORDS.put("FossilBirthDeath", TokenType.FOSSIL_BIRTH_DEATH);
         
-        // Data operations
+        // Substitution models
+        KEYWORDS.put("JC69", TokenType.JC69);
+        KEYWORDS.put("K80", TokenType.K80);
+        KEYWORDS.put("F81", TokenType.F81);
+        KEYWORDS.put("HKY", TokenType.HKY);
+        KEYWORDS.put("GTR", TokenType.GTR);
+        KEYWORDS.put("WAG", TokenType.WAG);
+        KEYWORDS.put("JTT", TokenType.JTT);
+        KEYWORDS.put("LG", TokenType.LG);
+        KEYWORDS.put("GY94", TokenType.GY94);
+        
+        // Rate heterogeneity
+        KEYWORDS.put("DiscreteGamma", TokenType.DISCRETE_GAMMA);
+        KEYWORDS.put("FreeRates", TokenType.FREE_RATES);
+        KEYWORDS.put("InvariantSites", TokenType.INVARIANT_SITES);
+        KEYWORDS.put("StrictClock", TokenType.STRICT_CLOCK);
+        KEYWORDS.put("UncorrelatedLognormal", TokenType.RELAXED_LOGNORMAL);
+        KEYWORDS.put("UncorrelatedExponential", TokenType.RELAXED_EXPONENTIAL);
+        
+        // Tree operations
+        KEYWORDS.put("mrca", TokenType.MRCA);
+        KEYWORDS.put("treeHeight", TokenType.TREE_HEIGHT);
+        KEYWORDS.put("nodeAge", TokenType.NODE_AGE);
+        KEYWORDS.put("branchLength", TokenType.BRANCH_LENGTH);
+        KEYWORDS.put("distanceMatrix", TokenType.DISTANCE_MATRIX);
+        KEYWORDS.put("descendantTaxa", TokenType.DESCENDANT_TAXA);
+        
+        // Phylogenetic processes
+        KEYWORDS.put("PhyloCTMC", TokenType.PHYLO_CTMC);
+        KEYWORDS.put("PhyloBM", TokenType.PHYLO_BM);
+        KEYWORDS.put("PhyloOU", TokenType.PHYLO_OU);
+        
+        // Mixture models
+        KEYWORDS.put("Mixture", TokenType.MIXTURE);
+        KEYWORDS.put("DiscreteGammaMixture", TokenType.DISCRETE_GAMMA_MIXTURE);
+        
+        // Math operations
+        KEYWORDS.put("vectorElement", TokenType.VECTOR_ELEMENT);
+        KEYWORDS.put("matrixElement", TokenType.MATRIX_ELEMENT);
+        KEYWORDS.put("scale", TokenType.SCALE);
+        KEYWORDS.put("normalize", TokenType.NORMALIZE);
+        KEYWORDS.put("log", TokenType.LOG);
+        KEYWORDS.put("exp", TokenType.EXP);
+        KEYWORDS.put("sum", TokenType.SUM);
+        KEYWORDS.put("product", TokenType.PRODUCT);
+        
+        // Sequence operations
         KEYWORDS.put("sequence", TokenType.SEQUENCE);
+        KEYWORDS.put("alignment", TokenType.ALIGNMENT);
     }
     
     private final String source;
@@ -87,6 +152,18 @@ public class Lexer {
             } else if (c == ']') {
                 tokens.add(new Token(TokenType.BRACKET_CLOSE, "]", line, column));
                 advance();
+            } else if (c == '(') {
+                tokens.add(new Token(TokenType.PAREN_OPEN, "(", line, column));
+                advance();
+            } else if (c == ')') {
+                tokens.add(new Token(TokenType.PAREN_CLOSE, ")", line, column));
+                advance();
+            } else if (c == ',') {
+                tokens.add(new Token(TokenType.COMMA, ",", line, column));
+                advance();
+            } else if (c == ':') {
+                tokens.add(new Token(TokenType.COLON, ":", line, column));
+                advance();
             } else if (c == '~') {
                 tokens.add(new Token(TokenType.TILDE, "~", line, column));
                 advance();
@@ -97,7 +174,7 @@ public class Lexer {
                 tokens.add(lexString());
             } else if (Character.isDigit(c) || c == '+' || c == '-' || c == '.') {
                 tokens.add(lexNumber());
-            } else if (Character.isLetter(c)) {
+            } else if (Character.isLetter(c) || c == '_') {
                 tokens.add(lexIdentifier());
             } else {
                 // Unexpected character
@@ -215,21 +292,27 @@ public class Lexer {
      */
     private Token lexIdentifier() {
         int startColumn = column;
-        StringBuilder sb = new StringBuilder();
+        String remaining = source.substring(position);
         
-        while (position < source.length() && (Character.isLetterOrDigit(peek()) || peek() == '_')) {
-            sb.append(peek());
-            advance();
-        }
-        
-        String word = sb.toString();
-        
-        // Check if it's a keyword
-        if (KEYWORDS.containsKey(word)) {
-            return new Token(KEYWORDS.get(word), word, line, startColumn);
+        Matcher matcher = IDENTIFIER_PATTERN.matcher(remaining);
+        if (matcher.find()) {
+            String identifier = matcher.group();
+            position += identifier.length();
+            column += identifier.length();
+            
+            // Check if it's a keyword
+            if (KEYWORDS.containsKey(identifier)) {
+                return new Token(KEYWORDS.get(identifier), identifier, line, startColumn);
+            } else {
+                // Valid identifier
+                return new Token(TokenType.IDENTIFIER, identifier, line, startColumn);
+            }
         } else {
-            // Unknown identifier, treat as error
-            return new Token(TokenType.ERROR, word, line, startColumn);
+            // This should not happen due to the regex pattern
+            char c = peek();
+            advance();
+            
+            return new Token(TokenType.ERROR, String.valueOf(c), line, startColumn);
         }
     }
     

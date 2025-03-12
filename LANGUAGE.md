@@ -1,6 +1,6 @@
-# StackPhy Language Definition
+# StackPhy Language Definition (PhyloSpec-aligned)
 
-StackPhy is a stack-based language for building probabilistic phylogenetic models. This document provides a formal definition of the language syntax and semantics.
+StackPhy is a stack-based language for building probabilistic phylogenetic models. This document provides a formal definition of the language syntax and semantics, aligned with the PhyloSpec standard.
 
 ## Overview
 
@@ -28,7 +28,7 @@ StackPhy recognizes the following token types:
   - `var` (Get variable)
   - `observe` (Attach observed data)
 
-- **KEYWORDS**: Operation names like `normal`, `hky`, `sequence`, etc.
+- **KEYWORDS**: Operation names like `Normal`, `HKY`, `sequence`, etc.
 
 ### Comments
 
@@ -43,24 +43,32 @@ Line comments start with `//` and continue to the end of the line:
 
 Whitespace (spaces, tabs, newlines) is ignored except as a token separator.
 
-## Data Types
+## Type System
 
-All values in StackPhy are typed. The following types exist:
+StackPhy implements the PhyloSpec type system:
 
-- **Parameter**: Represents a node in the model graph
-  - **Primitive**: Anonymous parameter (number, string, array)
-  - **Variable**: Named parameter that can be stochastic or deterministic
+### Basic Types
+- `Real`: Real-valued number
+- `Integer`: Integer-valued number
+- `Boolean`: Logical value (true/false)
+- `String`: Text value
 
-- **Distribution**: Probability distribution for stochastic variables
-  - Basic distributions: `normal`, `lognormal`, `exponential`, `dirichlet`, `gamma`
-  - Tree priors: `yule`, `birthDeath`, `coalescent`
-  - Sequence evolution: `phyloCTMC`
+### Specialized Types
+- `PositiveReal`: Positive real number (> 0)
+- `Probability`: Real number between 0 and 1
+- `Simplex`: Probability vector that sums to 1
 
-- **Model**: Substitution model for sequence evolution
-  - `hky`: Hasegawa-Kishino-Yano model
-  - `gtr`: General Time Reversible model
+### Collection Types
+- `Vector<T>`: Vector of elements of type T
+- `Matrix<T>`: Matrix of elements of type T
 
-- **Sequence**: DNA, RNA, or protein sequence data
+### Phylogenetic Types
+- `Tree`: Phylogenetic tree
+- `TimeTree`: Time-calibrated tree
+- `QMatrix`: Rate matrix for substitution models
+- `Alignment<A>`: Multiple sequence alignment (parameterized by alphabet A)
+- `Taxon`: Single taxonomic unit
+- `TaxonSet`: Set of taxa
 
 ## Execution Model
 
@@ -90,6 +98,15 @@ drop   # Removes the top stack item
 ]      # Creates an array from items since the last array marker
 ```
 
+### Type Operations
+
+```
+Real           # Creates a typed Real value (Number → Real)
+Integer        # Creates a typed Integer value (Number → Integer)
+PositiveReal   # Creates a typed PositiveReal value (Number → PositiveReal)
+Probability    # Creates a typed Probability value (Number → Probability)
+```
+
 ### Variable Operations
 
 ```
@@ -102,38 +119,68 @@ observe # Attaches observed data to a variable (StackItem, String → )
 ### Distribution Operations
 
 ```
-normal      # Creates a normal distribution (Parameter, Parameter → Distribution)
-lognormal   # Creates a log-normal distribution (Parameter, Parameter → Distribution)
-exponential # Creates an exponential distribution (Parameter → Distribution)
-dirichlet   # Creates a Dirichlet distribution (Parameter → Distribution)
-gamma       # Creates a gamma distribution (Parameter, Parameter → Distribution)
-yule        # Creates a Yule process tree prior (Parameter → Distribution)
-birthDeath  # Creates a birth-death process tree prior (Parameter, Parameter → Distribution)
-coalescent  # Creates a coalescent process tree prior (Parameter → Distribution)
-phyloCTMC   # Creates a phylogenetic CTMC (Parameter, Parameter → Distribution)
+Normal       # Creates a normal distribution (Real, PositiveReal → Distribution)
+LogNormal    # Creates a log-normal distribution (Real, PositiveReal → Distribution)
+Exponential  # Creates an exponential distribution (PositiveReal → Distribution)
+Dirichlet    # Creates a Dirichlet distribution (Vector<PositiveReal> → Distribution)
+Gamma        # Creates a gamma distribution (PositiveReal, PositiveReal → Distribution)
+Beta         # Creates a beta distribution (PositiveReal, PositiveReal → Distribution)
+Yule         # Creates a Yule process tree prior (PositiveReal → Distribution)
+BirthDeath   # Creates a birth-death process tree prior (PositiveReal, PositiveReal → Distribution)
+Coalescent   # Creates a coalescent process tree prior (PositiveReal → Distribution)
+PhyloCTMC    # Creates a phylogenetic CTMC (Tree, QMatrix → Distribution)
 ```
 
 ### Model Operations
 
 ```
-hky    # Creates an HKY substitution model (Parameter, Parameter → Model)
-gtr    # Creates a GTR substitution model (Parameter, Parameter → Model)
+HKY    # Creates an HKY substitution model (PositiveReal, Simplex → QMatrix)
+GTR    # Creates a GTR substitution model (Vector<PositiveReal>, Simplex → QMatrix)
+JC69   # Creates a JC69 substitution model (→ QMatrix)
+F81    # Creates an F81 substitution model (Simplex → QMatrix)
+WAG    # Creates a WAG protein substitution model (→ QMatrix)
+```
+
+### Rate Heterogeneity Operations
+
+```
+DiscreteGamma    # Creates a discrete gamma rate distribution (PositiveReal, Integer → Vector<PositiveReal>)
+InvariantSites   # Creates an invariant sites model (Probability → Vector<Real>)
+```
+
+### Constraint Operations
+
+```
+LessThan         # Creates a less than constraint (Real, Real → Constraint)
+GreaterThan      # Creates a greater than constraint (Real, Real → Constraint)
+Bounded          # Creates a bounded value constraint (Real, Real, Real → Constraint)
+Equals           # Creates an equality constraint (Any, Any → Constraint)
+```
+
+### Tree Operations
+
+```
+MRCA             # Finds the most recent common ancestor (Tree, TaxonSet → TreeNode)
+NodeAge          # Gets the age of a node (TreeNode → Real)
+TreeHeight       # Gets the height of a tree (Tree → Real)
 ```
 
 ### Data Operations
 
 ```
-sequence    # Creates a sequence object (String, String → Sequence)
+sequence         # Creates a sequence object (String, String → Sequence)
+taxon            # Creates a taxon object (String → Taxon)
+taxonSet         # Creates a set of taxa (Vector<Taxon> → TaxonSet)
 ```
 
 ## Stack Manipulation
 
-Operations follow a classic stack-based approach, where parameters are popped from the stack in reverse order. For example, the `normal` operation:
+Operations follow a classic stack-based approach, where parameters are popped from the stack in reverse order. For example, the `Normal` operation:
 
 ```
 1.0  # Push mean onto stack
 0.5  # Push standard deviation onto stack
-normal  # Pop standard deviation, pop mean, push normal distribution
+Normal  # Pop standard deviation, pop mean, push normal distribution
 ```
 
 ## Variables and References
@@ -146,7 +193,7 @@ Variables are named parameters in the model graph:
 
 Example:
 ```
-1.0 0.5 normal "x" ~  # Define stochastic variable x
+1.0 0.5 Normal "x" ~  # Define stochastic variable x
 "x" var              # Push variable x onto stack
 ```
 
@@ -156,25 +203,34 @@ Here's a complete example of an HKY model with a Yule tree prior:
 
 ```
 // Define kappa (transition/transversion ratio)
-1.0 0.5 lognormal "kappa" ~
+1.0 0.5 LogNormal "kappa" ~
 
 // Define nucleotide frequencies
-[ 1.0 1.0 1.0 1.0 ] dirichlet "freqs" ~
+[ 1.0 1.0 1.0 1.0 ] Dirichlet "baseFreqs" ~
 
 // Create HKY substitution model
-"kappa" var "freqs" var hky "subst_model" =
+"kappa" var "baseFreqs" var HKY "substModel" =
 
 // Define birth rate
-0.1 exponential "birth_rate" ~
+10.0 Exponential "birthRate" ~
 
 // Create Yule tree prior
-"birth_rate" var yule "tree" ~
+"birthRate" var Yule "phylogeny" ~
+
+// Create rate variation across sites
+0.5 4 DiscreteGamma "siteRates" =
 
 // Create the PhyloCTMC model
-"tree" var "subst_model" var phyloCTMC "seq" ~
+"phylogeny" var "substModel" var "siteRates" var PhyloCTMC "sequences" ~
 
 // Attach observed sequence data
-[ "human" "ACGTACGT" sequence "chimp" "ACGTACGC" sequence ] "seq" observe
+[ 
+  "human" "ACGTACGT" sequence 
+  "chimp" "ACGTACGC" sequence 
+] "sequences" observe
+
+// Add constraint on birth rate
+"birthRate" var 10.0 LessThan "birthRateConstraint" =
 ```
 
 ## Formal Grammar
@@ -185,9 +241,11 @@ statement: value | operation
 value: NUMBER | STRING
 operation: KEYWORD | OPERATOR | BRACKET_OPEN | BRACKET_CLOSE
 
-KEYWORD: "dup" | "swap" | "drop" | "normal" | "lognormal" | "exponential" |
-         "dirichlet" | "gamma" | "yule" | "birthDeath" | "coalescent" |
-         "phyloCTMC" | "hky" | "gtr" | "sequence" | "var"
+KEYWORD: "dup" | "swap" | "drop" | "Normal" | "LogNormal" | "Exponential" |
+         "Dirichlet" | "Gamma" | "Yule" | "BirthDeath" | "Coalescent" |
+         "PhyloCTMC" | "HKY" | "GTR" | "sequence" | "var" | "DiscreteGamma" |
+         "LessThan" | "GreaterThan" | "Bounded" | "Real" | "Integer" | 
+         "PositiveReal" | "Probability" | "MRCA" | "NodeAge"
 OPERATOR: "~" | "=" | "observe"
 BRACKET_OPEN: "["
 BRACKET_CLOSE: "]"
@@ -206,19 +264,19 @@ STRING: "([^"\\]|\\.)*"
    e. If token is an operation, execute it according to its definition
 3. After execution, the environment contains the complete model
 
-## Type System
+## Type System Rules
 
 The type system ensures that operations receive the correct types of parameters:
 
 - **Distribution operations** expect specific parameter types
-  - `normal` and `lognormal` expect two numeric parameters: mean and standard deviation
-  - `exponential` expects one numeric parameter: rate
-  - `dirichlet` expects an array parameter: concentration parameters
-  - etc.
+  - `Normal` expects a Real (mean) and a PositiveReal (sd)
+  - `LogNormal` expects a Real (meanlog) and a PositiveReal (sdlog)
+  - `Exponential` expects a PositiveReal (rate)
+  - `Dirichlet` expects a Vector<PositiveReal> (alpha)
 
 - **Model operations** expect specific parameter types
-  - `hky` expects a kappa parameter and an array of base frequencies
-  - `gtr` expects an array of rate parameters and an array of base frequencies
+  - `HKY` expects a PositiveReal (kappa) and a Simplex (baseFrequencies)
+  - `GTR` expects a Vector<PositiveReal> (rateMatrix) and a Simplex (baseFrequencies)
 
 - **Variable operations** expect specific types
   - `~` expects a distribution and a string

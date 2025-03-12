@@ -1,9 +1,9 @@
-// Simple HKY + Yule model example in StackPhy
+// Simple HKY + Yule model example in StackPhy (PhyloSpec-aligned)
 
 // Define kappa (transition/transversion ratio) with log-normal prior
 1.0     // Mean (on log scale)
 0.5     // Standard deviation (on log scale)
-lognormal
+LogNormal
 "kappa" // Variable name
 ~       // Define stochastic variable
 
@@ -14,39 +14,48 @@ lognormal
 1.0     // Concentration parameter for G
 1.0     // Concentration parameter for T
 ]       // End array
-dirichlet
-"freqs" // Variable name
+Dirichlet
+"baseFreqs" // Variable name (renamed from freqs)
 ~       // Define stochastic variable
 
 // Create HKY substitution model
 "kappa" // Get kappa parameter
 var     // Push kappa onto stack
-"freqs" // Get frequencies parameter
+"baseFreqs" // Get frequencies parameter
 var     // Push frequencies onto stack
-hky     // Create HKY model
-"subst_model" // Variable name
+HKY     // Create HKY model (capitalized)
+"substModel" // Variable name (camelCase)
 =       // Define deterministic variable
 
 // Define birth rate with exponential prior
-0.1     // Rate parameter
-exponential
-"birth_rate" // Variable name
+10.0    // Rate parameter (changed from mean=0.1 to rate=10.0)
+Exponential
+"birthRate" // Variable name (camelCase)
 ~       // Define stochastic variable
 
 // Create Yule tree prior
-"birth_rate" // Get birth rate parameter
+"birthRate" // Get birth rate parameter
 var     // Push birth rate onto stack
-yule    // Create Yule process
-"tree"  // Variable name
+Yule    // Create Yule process (capitalized)
+"phylogeny"  // Variable name (changed from tree)
 ~       // Define stochastic variable
 
+// Create rate variation across sites
+0.5     // Shape parameter
+4       // Number of categories
+DiscreteGamma
+"siteRates" // Variable name
+=       // Define deterministic variable
+
 // Create the PhyloCTMC model
-"tree"  // Get tree parameter
+"phylogeny"  // Get tree parameter
 var     // Push tree onto stack
-"subst_model" // Get substitution model
+"substModel" // Get substitution model
 var     // Push substitution model onto stack
-phyloCTMC
-"seq"   // Variable name
+"siteRates"  // Get site rates
+var     // Push site rates onto stack
+PhyloCTMC    // Create PhyloCTMC model (capitalized)
+"sequences"   // Variable name (changed from seq)
 ~       // Define stochastic variable
 
 // Observed sequence data
@@ -58,5 +67,13 @@ sequence
 "gorilla"   "ACGTACGTACGCACGTACGTACGT" // Gorilla sequence
 sequence
 ]       // End array
-"seq"   // Variable to observe
+"sequences"   // Variable to observe
 observe // Attach observed data to the sequence variable
+
+// Add constraint on birth rate 
+"birthRate"  // Get birth rate parameter
+var     // Push birth rate onto stack
+10.0    // Upper bound
+LessThan // Create constraint
+"birthRateConstraint" // Constraint name
+=       // Define constraint

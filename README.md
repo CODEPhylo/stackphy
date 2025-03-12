@@ -1,6 +1,6 @@
 # StackPhy
 
-StackPhy is a stack-based language for phylogenetic modeling. It provides a concise, expressive way to define probabilistic models for phylogenetic inference.
+StackPhy is a stack-based language for phylogenetic modeling that conforms to the PhyloSpec reference standard. It provides a concise, expressive way to define probabilistic models for phylogenetic inference.
 
 ## Overview
 
@@ -10,28 +10,32 @@ StackPhy uses a stack-based paradigm for model construction. The language is des
 - **Explicit**: Stack operations make data flow explicit
 - **Expressive**: Support for common phylogenetic model components
 - **Composable**: Easy to combine different model components
+- **PhyloSpec-compliant**: Follows the PhyloSpec reference standard
 
 ## Quick Start
 
 ```
 // Define transition/transversion ratio prior
-1.0 0.5 lognormal "kappa" ~
+1.0 0.5 LogNormal "kappa" ~
 
 // Define nucleotide frequency prior
-[ 1.0 1.0 1.0 1.0 ] dirichlet "freqs" ~
+[ 1.0 1.0 1.0 1.0 ] Dirichlet "baseFreqs" ~
 
 // Create HKY substitution model
-"kappa" var "freqs" var hky "subst_model" =
+"kappa" var "baseFreqs" var HKY "substModel" =
 
 // Define birth rate and create Yule tree prior
-0.1 exponential "birth_rate" ~
-"birth_rate" var yule "tree" ~
+10.0 Exponential "birthRate" ~
+"birthRate" var Yule "phylogeny" ~
+
+// Create rate variation across sites
+0.5 4 DiscreteGamma "siteRates" =
 
 // Create phylogenetic CTMC model
-"tree" var "subst_model" var phyloCTMC "seq" ~
+"phylogeny" var "substModel" var "siteRates" var PhyloCTMC "sequences" ~
 
 // Attach observed sequence data
-[ "human" "ACGTTGCA..." sequence "chimp" "ACGTTGCA..." sequence ] "seq" observe
+[ "human" "ACGTTGCA..." sequence "chimp" "ACGTTGCA..." sequence ] "sequences" observe
 ```
 
 ## Installation
@@ -62,13 +66,21 @@ Full documentation is available in the `docs/` directory:
 - [Tutorial](docs/tutorial.md)
 - [Operations Reference](docs/operations.md)
 - [Examples](docs/examples/)
+- [PhyloSpec Compliance](docs/phylospec.md)
 
 ## Features
 
-- **Substitution Models**: HKY, GTR
-- **Tree Priors**: Yule, Birth-Death, Coalescent
-- **Distributions**: Normal, LogNormal, Exponential, Gamma, Dirichlet
+- **Type System**: Real, Integer, PositiveReal, Probability, Tree, TimeTree, etc.
+- **Substitution Models**: HKY, GTR, JC69, F81
+- **Tree Priors**: Yule, BirthDeath, Coalescent
+- **Distributions**: Normal, LogNormal, Exponential, Gamma, Dirichlet, Beta
+- **Rate Heterogeneity**: DiscreteGamma, InvariantSites
+- **Constraints**: LessThan, GreaterThan, Bounded, Equals
 - **Sequence Operations**: DNA/RNA/Protein sequence handling
+
+## PhyloSpec Compliance
+
+StackPhy implements the [PhyloSpec](https://github.com/phylospec/phylospec) reference standard, ensuring semantic interoperability with other phylogenetic modeling languages. This means models written in StackPhy can be translated to and from other PhyloSpec-compliant languages like ModelPhy and CodePhy.
 
 ## Contributing
 

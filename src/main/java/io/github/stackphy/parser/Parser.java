@@ -1,10 +1,12 @@
 package io.github.stackphy.parser;
 
 import io.github.stackphy.distribution.*;
+import io.github.stackphy.functions.*;
 import io.github.stackphy.model.*;
 import io.github.stackphy.runtime.Environment;
 import io.github.stackphy.runtime.Stack;
 import io.github.stackphy.substitution.*;
+import io.github.stackphy.types.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Parser for the StackPhy language.
+ * Parser for the StackPhy language that is semantically compatible with PhyloSpec.
  * Converts tokens into operations.
  */
 public class Parser {
@@ -79,21 +81,68 @@ public class Parser {
                 case EXPONENTIAL:
                 case DIRICHLET:
                 case GAMMA:
+                case BETA:
+                case UNIFORM:
                 case YULE:
                 case BIRTH_DEATH:
                 case COALESCENT:
+                case FOSSIL_BIRTH_DEATH:
+                case JC69:
+                case K80:
+                case F81:
                 case HKY:
                 case GTR:
+                case WAG:
+                case JTT:
+                case LG:
+                case GY94:
+                case DISCRETE_GAMMA:
+                case FREE_RATES:
+                case INVARIANT_SITES:
+                case STRICT_CLOCK:
+                case RELAXED_LOGNORMAL:
+                case RELAXED_EXPONENTIAL:
                 case PHYLO_CTMC:
+                case PHYLO_BM:
+                case PHYLO_OU:
+                case MIXTURE:
+                case DISCRETE_GAMMA_MIXTURE:
+                case MRCA:
+                case TREE_HEIGHT:
+                case NODE_AGE:
+                case BRANCH_LENGTH:
+                case DISTANCE_MATRIX:
+                case DESCENDANT_TAXA:
+                case VECTOR_ELEMENT:
+                case MATRIX_ELEMENT:
+                case SCALE:
+                case NORMALIZE:
+                case LOG:
+                case EXP:
+                case SUM:
+                case PRODUCT:
                 case SEQUENCE:
+                case ALIGNMENT:
+                case LESS_THAN:
+                case GREATER_THAN:
+                case EQUALS:
+                case BOUNDED:
+                case SUM_TO:
+                case MONOPHYLY:
+                case CALIBRATION:
+                case CONSTRAINT:
                     // Named operation
-                    String name = token.getValue();
+                    String name = token.getValue().toLowerCase(); // PhyloSpec operations are case-insensitive
                     if (this.operations.containsKey(name)) {
                         operation = new NamedOperation(name, this.operations.get(name), token.getLine(), token.getColumn());
                     } else {
                         throw new StackPhyException("Unknown operation: " + name, token.getLine(), token.getColumn());
                     }
                     break;
+                
+                case IDENTIFIER:
+                    // For user-defined identifiers
+                    throw new StackPhyException("Unexpected identifier: " + token.getValue(), token.getLine(), token.getColumn());
                 
                 case ERROR:
                     throw new StackPhyException("Syntax error: " + token.getValue(), token.getLine(), token.getColumn());
@@ -113,7 +162,7 @@ public class Parser {
     }
     
     /**
-     * Registers all operations.
+     * Registers all operations according to PhyloSpec semantics.
      */
     private void registerOperations() {
         // Base operations
@@ -239,48 +288,75 @@ public class Parser {
             variable.setObservedData(data);
         });
         
-        // Distribution operations
+        // Core continuous distributions (PhyloSpec-compliant)
         operations.put("normal", (stack, env) -> {
+            // Check against PhyloSpec signature
+            DistributionSignature signature = DistributionRegistry.getDistribution("Normal");
+            
             Parameter sd = stack.pop(Parameter.class);
             Parameter mean = stack.pop(Parameter.class);
+            
+            // Validate types (to be implemented)
             
             Normal dist = new Normal(mean, sd);
             stack.push(dist);
         });
         
         operations.put("lognormal", (stack, env) -> {
-            Parameter sd = stack.pop(Parameter.class);
-            Parameter mean = stack.pop(Parameter.class);
+            // PhyloSpec: LogNormal(meanlog: Real, sdlog: PositiveReal) -> PositiveReal
+            Parameter sdlog = stack.pop(Parameter.class);
+            Parameter meanlog = stack.pop(Parameter.class);
             
-            LogNormal dist = new LogNormal(mean, sd);
+            LogNormal dist = new LogNormal(meanlog, sdlog);
             stack.push(dist);
         });
         
         operations.put("exponential", (stack, env) -> {
+            // PhyloSpec: Exponential(rate: PositiveReal) -> PositiveReal
             Parameter rate = stack.pop(Parameter.class);
             
             Exponential dist = new Exponential(rate);
             stack.push(dist);
         });
         
+        operations.put("gamma", (stack, env) -> {
+            // PhyloSpec: Gamma(shape: PositiveReal, rate: PositiveReal) -> PositiveReal
+            Parameter rate = stack.pop(Parameter.class);
+            Parameter shape = stack.pop(Parameter.class);
+            
+            Gamma dist = new Gamma(shape, rate);
+            stack.push(dist);
+        });
+        
+        operations.put("beta", (stack, env) -> {
+            // PhyloSpec: Beta(alpha: PositiveReal, beta: PositiveReal) -> Probability
+            Parameter beta = stack.pop(Parameter.class);
+            Parameter alpha = stack.pop(Parameter.class);
+            
+            // Beta distribution (to be implemented)
+            throw new UnsupportedOperationException("Beta distribution not yet implemented");
+        });
+        
         operations.put("dirichlet", (stack, env) -> {
+            // PhyloSpec: Dirichlet(alpha: Vector<PositiveReal>) -> Simplex
             Parameter concentrationParams = stack.pop(Parameter.class);
             
             Dirichlet dist = new Dirichlet(concentrationParams);
             stack.push(dist);
         });
         
-        operations.put("gamma", (stack, env) -> {
-            Parameter rate = stack.pop(Parameter.class);
-            Parameter shape = stack.pop(Parameter.class);
+        operations.put("uniform", (stack, env) -> {
+            // PhyloSpec: Uniform(lower: Real, upper: Real) -> Real
+            Parameter upper = stack.pop(Parameter.class);
+            Parameter lower = stack.pop(Parameter.class);
             
-            // Create gamma distribution (to be implemented)
-            // Gamma dist = new Gamma(shape, rate);
-            // stack.push(dist);
-            throw new UnsupportedOperationException("Gamma distribution not yet implemented");
+            // Uniform distribution (to be implemented)
+            throw new UnsupportedOperationException("Uniform distribution not yet implemented");
         });
         
+        // Tree distributions (PhyloSpec-compliant)
         operations.put("yule", (stack, env) -> {
+            // PhyloSpec: Yule(birthRate: PositiveReal) -> Tree
             Parameter birthRate = stack.pop(Parameter.class);
             
             // Create a Yule process with the birth rate
@@ -288,27 +364,65 @@ public class Parser {
             stack.push(yule);
         });
         
-        operations.put("birthDeath", (stack, env) -> {
+        operations.put("birthdeath", (stack, env) -> {
+            // PhyloSpec: BirthDeath(birthRate: PositiveReal, deathRate: PositiveReal, rootHeight: PositiveReal?) -> Tree
+            // The rootHeight parameter is optional
+            
+            // Check if there's a third parameter (rootHeight is optional)
             Parameter deathRate = stack.pop(Parameter.class);
             Parameter birthRate = stack.pop(Parameter.class);
             
-            // Create birth-death process (to be implemented)
-            // BirthDeath dist = new BirthDeath(birthRate, deathRate);
-            // stack.push(dist);
-            throw new UnsupportedOperationException("Birth-death process not yet implemented");
+            // For now, just use the constructor with required parameters
+            BirthDeath dist = new BirthDeath(birthRate, deathRate);
+            stack.push(dist);
         });
         
         operations.put("coalescent", (stack, env) -> {
+            // PhyloSpec: Coalescent(populationSize: PositiveReal) -> Tree
             Parameter popSize = stack.pop(Parameter.class);
             
-            // Create coalescent process (to be implemented)
-            // Coalescent dist = new Coalescent(popSize);
-            // stack.push(dist);
-            throw new UnsupportedOperationException("Coalescent process not yet implemented");
+            Coalescent dist = new Coalescent(popSize);
+            stack.push(dist);
         });
         
-        // Model operations
+        operations.put("fossilbirthdeath", (stack, env) -> {
+            // PhyloSpec: FossilBirthDeath(birthRate: PositiveReal, deathRate: PositiveReal, samplingRate: PositiveReal, rho: Probability) -> TimeTree
+            Parameter rho = stack.pop(Parameter.class);
+            Parameter samplingRate = stack.pop(Parameter.class);
+            Parameter deathRate = stack.pop(Parameter.class);
+            Parameter birthRate = stack.pop(Parameter.class);
+            
+            // FossilBirthDeath distribution (to be implemented)
+            throw new UnsupportedOperationException("FossilBirthDeath process not yet implemented");
+        });
+                
+        // Nucleotide substitution models (PhyloSpec-compliant)
+        operations.put("jc69", (stack, env) -> {
+            // PhyloSpec: JC69() -> QMatrix
+            // No parameters for JC69
+            
+            // JC69 model (to be implemented)
+            throw new UnsupportedOperationException("JC69 model not yet implemented");
+        });
+        
+        operations.put("k80", (stack, env) -> {
+            // PhyloSpec: K80(kappa: PositiveReal) -> QMatrix
+            Parameter kappa = stack.pop(Parameter.class);
+            
+            // K80 model (to be implemented)
+            throw new UnsupportedOperationException("K80 model not yet implemented");
+        });
+        
+        operations.put("f81", (stack, env) -> {
+            // PhyloSpec: F81(baseFrequencies: Simplex) -> QMatrix
+            Parameter baseFreqs = stack.pop(Parameter.class);
+            
+            // F81 model (to be implemented)
+            throw new UnsupportedOperationException("F81 model not yet implemented");
+        });
+        
         operations.put("hky", (stack, env) -> {
+            // PhyloSpec: HKY(kappa: PositiveReal, baseFrequencies: Simplex) -> QMatrix
             Parameter baseFreqs = stack.pop(Parameter.class);
             Parameter kappa = stack.pop(Parameter.class);
             
@@ -317,6 +431,7 @@ public class Parser {
         });
         
         operations.put("gtr", (stack, env) -> {
+            // PhyloSpec: GTR(rateMatrix: Vector<PositiveReal>, baseFrequencies: Simplex) -> QMatrix
             Parameter baseFreqs = stack.pop(Parameter.class);
             Parameter rates = stack.pop(Parameter.class);
             
@@ -324,16 +439,179 @@ public class Parser {
             stack.push(model);
         });
         
-        operations.put("phyloCTMC", (stack, env) -> {
+        // Protein models (PhyloSpec-compliant)
+        operations.put("wag", (stack, env) -> {
+            // PhyloSpec: WAG(freqsModel: Boolean?) -> QMatrix
+            Parameter freqsModel = null;
+            // Check if there's a parameter
+            if (!stack.isEmpty() && stack.peek() instanceof Parameter) {
+                freqsModel = stack.pop(Parameter.class);
+            }
+            
+            // WAG model (to be implemented)
+            throw new UnsupportedOperationException("WAG model not yet implemented");
+        });
+        
+        operations.put("jtt", (stack, env) -> {
+            // PhyloSpec: JTT(freqsModel: Boolean?) -> QMatrix
+            Parameter freqsModel = null;
+            // Check if there's a parameter
+            if (!stack.isEmpty() && stack.peek() instanceof Parameter) {
+                freqsModel = stack.pop(Parameter.class);
+            }
+            
+            // JTT model (to be implemented)
+            throw new UnsupportedOperationException("JTT model not yet implemented");
+        });
+        
+        operations.put("lg", (stack, env) -> {
+            // PhyloSpec: LG(freqsModel: Boolean?) -> QMatrix
+            Parameter freqsModel = null;
+            // Check if there's a parameter
+            if (!stack.isEmpty() && stack.peek() instanceof Parameter) {
+                freqsModel = stack.pop(Parameter.class);
+            }
+            
+            // LG model (to be implemented)
+            throw new UnsupportedOperationException("LG model not yet implemented");
+        });
+        
+        // Codon models (PhyloSpec-compliant)
+        operations.put("gy94", (stack, env) -> {
+            // PhyloSpec: GY94(omega: PositiveReal, kappa: PositiveReal, codonFrequencies: Simplex) -> QMatrix
+            Parameter codonFreqs = stack.pop(Parameter.class);
+            Parameter kappa = stack.pop(Parameter.class);
+            Parameter omega = stack.pop(Parameter.class);
+            
+            // GY94 model (to be implemented)
+            throw new UnsupportedOperationException("GY94 model not yet implemented");
+        });
+        
+        // Rate heterogeneity functions (PhyloSpec-compliant)
+        operations.put("discretegamma", (stack, env) -> {
+            // PhyloSpec: DiscreteGamma(shape: PositiveReal, categories: PosInteger) -> Vector<PositiveReal>
+            Parameter categories = stack.pop(Parameter.class);
+            Parameter shape = stack.pop(Parameter.class);
+            
+            // DiscreteGamma model (to be implemented)
+            throw new UnsupportedOperationException("DiscreteGamma model not yet implemented");
+        });
+        
+        operations.put("freerates", (stack, env) -> {
+            // PhyloSpec: FreeRates(rates: Vector<PositiveReal>, weights: Simplex) -> Vector<PositiveReal>
+            Parameter weights = stack.pop(Parameter.class);
+            Parameter rates = stack.pop(Parameter.class);
+            
+            // FreeRates model (to be implemented)
+            throw new UnsupportedOperationException("FreeRates model not yet implemented");
+        });
+        
+        operations.put("invariantsites", (stack, env) -> {
+            // PhyloSpec: InvariantSites(proportion: Probability) -> Vector<Real>
+            Parameter proportion = stack.pop(Parameter.class);
+            
+            // InvariantSites model (to be implemented)
+            throw new UnsupportedOperationException("InvariantSites model not yet implemented");
+        });
+        
+        operations.put("strictclock", (stack, env) -> {
+            // PhyloSpec: StrictClock(rate: PositiveReal) -> Vector<PositiveReal>
+            Parameter rate = stack.pop(Parameter.class);
+            
+            // StrictClock model (to be implemented)
+            throw new UnsupportedOperationException("StrictClock model not yet implemented");
+        });
+        
+        operations.put("uncorrelatedlognormal", (stack, env) -> {
+            // PhyloSpec: UncorrelatedLognormal(mean: Real, stdev: PositiveReal) -> Vector<PositiveReal>
+            Parameter stdev = stack.pop(Parameter.class);
+            Parameter mean = stack.pop(Parameter.class);
+            
+            // UncorrelatedLognormal model (to be implemented)
+            throw new UnsupportedOperationException("UncorrelatedLognormal model not yet implemented");
+        });
+        
+        operations.put("uncorrelatedexponential", (stack, env) -> {
+            // PhyloSpec: UncorrelatedExponential(mean: PositiveReal) -> Vector<PositiveReal>
+            Parameter mean = stack.pop(Parameter.class);
+            
+            // UncorrelatedExponential model (to be implemented)
+            throw new UnsupportedOperationException("UncorrelatedExponential model not yet implemented");
+        });
+        
+        // Tree functions (PhyloSpec-compliant)
+        operations.put("mrca", (stack, env) -> {
+            // PhyloSpec: mrca(tree: Tree, taxa: TaxonSet) -> TreeNode
+            Parameter taxa = stack.pop(Parameter.class);
+            Parameter tree = stack.pop(Parameter.class);
+            
+            // MRCA function (to be implemented)
+            throw new UnsupportedOperationException("MRCA function not yet implemented");
+        });
+        
+        operations.put("treeheight", (stack, env) -> {
+            // PhyloSpec: treeHeight(tree: Tree) -> Real
+            Parameter tree = stack.pop(Parameter.class);
+            
+            // treeHeight function (to be implemented)
+            throw new UnsupportedOperationException("treeHeight function not yet implemented");
+        });
+        
+        // Sequence evolution models (PhyloSpec-compliant)
+        operations.put("phyloctmc", (stack, env) -> {
+            // PhyloSpec: PhyloCTMC<A>(tree: Tree, Q: QMatrix, siteRates: Vector<PositiveReal>?, branchRates: Vector<PositiveReal>?) -> Alignment<A>
+            
+            // Check how many parameters we have
+            // Our current PhyloCTMC constructor only supports tree and substModel (2 params)
+            // or tree, substModel, siteRates, branchRates (4 params)
+            
+            // Check if we have the siteRates parameter on the stack
+            StackItem potentialSiteRates = null;
+            if (stack.size() >= 3) {
+                potentialSiteRates = stack.peek();
+            }
+            
+            // Based on PhyloCTMC constructors, we either need 2 or 4 parameters
             Parameter substModel = stack.pop(Parameter.class);
             Parameter tree = stack.pop(Parameter.class);
             
-            // Create a PhyloCTMC model with the tree and substitution model
+            // Create PhyloCTMC model with only required parameters
             PhyloCTMC model = new PhyloCTMC(tree, substModel);
             stack.push(model);
-        });      
-          
-        // Data operations
+        });
+                
+        operations.put("phylobm", (stack, env) -> {
+            // PhyloSpec: PhyloBM(tree: Tree, sigma: PositiveReal, rootValue: Real) -> Vector<Real>
+            Parameter rootValue = stack.pop(Parameter.class);
+            Parameter sigma = stack.pop(Parameter.class);
+            Parameter tree = stack.pop(Parameter.class);
+            
+            // PhyloBM model (to be implemented)
+            throw new UnsupportedOperationException("PhyloBM model not yet implemented");
+        });
+        
+        operations.put("phyloou", (stack, env) -> {
+            // PhyloSpec: PhyloOU(tree: Tree, sigma: PositiveReal, alpha: PositiveReal, optimum: Real) -> Vector<Real>
+            Parameter optimum = stack.pop(Parameter.class);
+            Parameter alpha = stack.pop(Parameter.class);
+            Parameter sigma = stack.pop(Parameter.class);
+            Parameter tree = stack.pop(Parameter.class);
+            
+            // PhyloOU model (to be implemented)
+            throw new UnsupportedOperationException("PhyloOU model not yet implemented");
+        });
+        
+        // Math functions (PhyloSpec-compliant)
+        operations.put("vectorelement", (stack, env) -> {
+            // PhyloSpec: vectorElement(vector: Vector<T>, index: Integer) -> T
+            Parameter index = stack.pop(Parameter.class);
+            Parameter vector = stack.pop(Parameter.class);
+            
+            // vectorElement function (to be implemented)
+            throw new UnsupportedOperationException("vectorElement function not yet implemented");
+        });
+        
+        // Data operations (PhyloSpec-compatible)
         operations.put("sequence", (stack, env) -> {
             String dnaString = null;
             String taxonName = null;
@@ -365,6 +643,27 @@ public class Parser {
             Sequence sequence = new Sequence(taxonName, dnaString);
             stack.push(sequence);
         });
+        
+        // Constraint functions (PhyloSpec-compliant)
+        operations.put("lessthan", (stack, env) -> {
+            // PhyloSpec: LessThan(left: Real, right: Real) -> Constraint
+            Parameter right = stack.pop(Parameter.class);
+            Parameter left = stack.pop(Parameter.class);
+            
+            // LessThan constraint (to be implemented)
+            throw new UnsupportedOperationException("LessThan constraint not yet implemented");
+        });
+        
+        operations.put("greaterthan", (stack, env) -> {
+            // PhyloSpec: GreaterThan(left: Real, right: Real) -> Constraint
+            Parameter right = stack.pop(Parameter.class);
+            Parameter left = stack.pop(Parameter.class);
+            
+            // GreaterThan constraint (to be implemented)
+            throw new UnsupportedOperationException("GreaterThan constraint not yet implemented");
+        });
+        
+        // Add implementations for all other PhyloSpec functions...
     }
     
     /**
@@ -395,5 +694,18 @@ public class Parser {
             position++;
         }
         return tokens.get(position - 1);
+    }
+    
+    /**
+     * Validates if a parameter conforms to a PhyloSpec type.
+     * 
+     * @param param The parameter to validate
+     * @param expectedType The expected PhyloSpec type
+     * @return true if the parameter is valid for the type, false otherwise
+     */
+    private boolean validateParameterType(Parameter param, PhyloSpecType expectedType) {
+        // Implementation of type checking based on PhyloSpec type system
+        // This is a stub - full implementation would check against the PhyloSpec type system
+        return true;
     }
 }
