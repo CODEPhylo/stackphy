@@ -16,6 +16,13 @@ public enum TokenType {
     PAREN_CLOSE,    // ')'
     COMMA,          // ','
     COLON,          // ':'
+    SEMICOLON,      // ';'
+    DASH,           // '-' character    
+    MULTIPLY,       // '*'
+
+    // Function definition
+    FUNCTION_START, // ':' (for function definition)
+    FUNCTION_END,   // ';' (for function definition)
     
     // Operators
     TILDE,      // '~' (Define stochastic variable)
@@ -27,6 +34,11 @@ public enum TokenType {
     DUP,        // Duplicate top item
     SWAP,       // Swap top two items
     DROP,       // Remove top item
+    
+    // Control flow operators
+    IF,         // 'if' (Conditional execution)
+    ELSE,       // 'else' (Alternative branch)
+    ENDIF,      // 'endif' (End conditional)
     
     // Constraint operations
     CONSTRAINT, // 'constraint' keyword
@@ -66,6 +78,7 @@ public enum TokenType {
     
     // Rate heterogeneity operations
     DISCRETE_GAMMA, // Discrete gamma distribution
+    DISCRETE_GAMMA_VECTOR, // Discrete gamma distribution
     FREE_RATES,     // Freely varying rates
     INVARIANT_SITES, // Invariant sites model
     STRICT_CLOCK,    // Strict molecular clock

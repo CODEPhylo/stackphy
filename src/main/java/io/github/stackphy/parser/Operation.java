@@ -1,3 +1,4 @@
+// Operation.java
 package io.github.stackphy.parser;
 
 import io.github.stackphy.runtime.Environment;
@@ -15,6 +16,20 @@ public interface Operation {
      * @throws StackPhyException if an error occurs during execution
      */
     void execute(Stack stack, Environment env) throws StackPhyException;
+    
+    /**
+     * Gets the line number where this operation was found.
+     * 
+     * @return The line number
+     */
+    int getLine();
+    
+    /**
+     * Gets the column number where this operation was found.
+     * 
+     * @return The column number
+     */
+    int getColumn();
     
     /**
      * Returns a string representation of this operation.

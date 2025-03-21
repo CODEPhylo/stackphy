@@ -1,4 +1,4 @@
-# StackPhy Language Definition (PhyloSpec-aligned)
+# StackPhy Language Definition
 
 StackPhy is a stack-based language for building probabilistic phylogenetic models. This document provides a formal definition of the language syntax and semantics, aligned with the PhyloSpec standard.
 

@@ -17,11 +17,9 @@ import java.util.List;
 /**
  * Operation that represents a function or distribution call.
  */
-public class FunctionCallOperation implements Operation {
+public class FunctionCallOperation extends AbstractOperation {
     private final String name;
     private final List<Operation> argumentOps;
-    private final int line;
-    private final int column;
     
     /**
      * Creates a new function call operation.
@@ -32,10 +30,9 @@ public class FunctionCallOperation implements Operation {
      * @param column The column number where the operation was found
      */
     public FunctionCallOperation(String name, List<Operation> argumentOps, int line, int column) {
+        super(line, column);
         this.name = name;
         this.argumentOps = argumentOps;
-        this.line = line;
-        this.column = column;
     }
     
     @Override

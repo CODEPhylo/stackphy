@@ -10,8 +10,8 @@ import java.nio.file.Files;
 import java.util.List;
 
 /**
- * Main parser class for StackPhy language.
- * Coordinates lexing, parsing, and model building.
+ * Main parser class for StackPhy language with PhyloSpec semantic compatibility.
+ * Provides both instance-based and static utility interfaces.
  */
 public class StackPhyParser {
     private final Interpreter interpreter;
@@ -52,38 +52,55 @@ public class StackPhyParser {
      * @return The constructed Environment with the complete model
      * @throws StackPhyException If there is a syntax or semantic error
      */
-public Environment parseString(String code) throws StackPhyException {
-    // Create lexer and generate tokens
-    Lexer lexer = new Lexer(code);
-    List<Token> tokens = lexer.tokenize();
-    
-    // Print tokens for debugging
-    System.out.println("Tokens:");
-    for (Token token : tokens) {
-        System.out.println("  " + token);
+    public Environment parseString(String code) throws StackPhyException {
+        return parseString(code, true);
     }
     
-    // Create parser and parse tokens
-    Parser parser = new Parser(tokens);
-    List<Operation> operations = parser.parse();
-    
-    // Print operations for debugging
-    System.out.println("\nOperations:");
-    for (Operation op : operations) {
-        System.out.println("  " + op);
+    /**
+     * Parses StackPhy code into operations without executing them.
+     * 
+     * @param code The StackPhy code to parse
+     * @return The list of operations
+     * @throws StackPhyException if an error occurs during parsing
+     */
+    public static List<Operation> parse(String code) throws StackPhyException {
+        return ParserFactory.parse(code);
     }
     
-    // Execute operations using the interpreter with more debugging
-    System.out.println("\nExecution:");
-    for (Operation op : operations) {
-        System.out.println("  Before " + op + ": Stack = " + interpreter.getStack());
-        interpreter.execute(op);
-        System.out.println("  After  " + op + ": Stack = " + interpreter.getStack());
-        System.out.println();
+    /**
+     * Parses StackPhy code from a string and builds the model.
+     * 
+     * @param code The StackPhy code to parse
+     * @param debug Whether to print debug information
+     * @return The constructed Environment with the complete model
+     * @throws StackPhyException If there is a syntax or semantic error
+     */
+    public Environment parseString(String code, boolean debug) throws StackPhyException {
+        // Parse using the ParserFactory
+        List<Operation> operations = ParserFactory.parse(code);
+        
+        if (debug) {
+            // Print operations for debugging
+            System.out.println("\nOperations:");
+            for (Operation op : operations) {
+                System.out.println("  " + op);
+            }
+            
+            // Show execution
+            System.out.println("\nExecution:");
+            System.out.println("  Initial stack: " + interpreter.getStack());
+        }
+        
+        // Execute all operations at once for proper function handling
+        interpreter.execute(operations);
+        
+        if (debug) {
+            // Show final stack state
+            System.out.println("  Final stack: " + interpreter.getStack());
+        }
+        
+        return interpreter.getEnvironment();
     }
-    
-    return interpreter.getEnvironment();
-}
     
     /**
      * Gets the interpreter.
@@ -117,5 +134,37 @@ public Environment parseString(String code) throws StackPhyException {
      */
     public void clear() {
         interpreter.clear();
+    }
+    
+    // Static convenience methods from PhyloSpecAdapter
+    
+    /**
+     * Parses and executes PhyloSpec-compatible StackPhy code.
+     * 
+     * @param code The StackPhy code to parse and execute
+     * @return The environment after execution
+     * @throws StackPhyException if an error occurs during parsing or execution
+     */
+    public static Environment parseAndExecute(String code) throws StackPhyException {
+        StackPhyParser parser = new StackPhyParser();
+        return parser.parseString(code, false);
+    }
+    
+    /**
+     * Executes a list of operations.
+     * 
+     * @param operations The operations to execute
+     * @return The environment after execution
+     * @throws StackPhyException if an error occurs during execution
+     */
+    public static Environment execute(List<Operation> operations) throws StackPhyException {
+        // Execute the operations
+        Stack stack = new Stack();
+        Environment env = new Environment();
+        Interpreter interpreter = new Interpreter(stack, env);
+        
+        interpreter.execute(operations);
+        
+        return env;
     }
 }

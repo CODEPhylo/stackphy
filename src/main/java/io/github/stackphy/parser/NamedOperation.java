@@ -6,11 +6,9 @@ import io.github.stackphy.runtime.Stack;
 /**
  * Operation that executes a named operation.
  */
-public class NamedOperation implements Operation {
+public class NamedOperation extends AbstractOperation {
     private final String name;
     private final OperationExecutor executor;
-    private final int line;
-    private final int column;
     
     /**
      * Creates a new named operation.
@@ -21,12 +19,11 @@ public class NamedOperation implements Operation {
      * @param column The column number where the operation was found
      */
     public NamedOperation(String name, OperationExecutor executor, int line, int column) {
+        super(line, column);
         this.name = name;
         this.executor = executor;
-        this.line = line;
-        this.column = column;
     }
-    
+        
     @Override
     public void execute(Stack stack, Environment env) throws StackPhyException {
         try {

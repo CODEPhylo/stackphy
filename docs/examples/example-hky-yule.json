@@ -1,0 +1,93 @@
+{
+  "codephyVersion": "0.1",
+  "model": "StackPhy Export",
+  "metadata": {
+    "title": "Model exported from StackPhy",
+    "description": "This model was automatically exported from a StackPhy script.",
+    "created": "2025-03-11T09:53:47.971859+13:00",
+    "modified": "2025-03-11T09:53:47.971859+13:00",
+    "software": {
+      "name": "StackPhy",
+      "version": "0.1",
+      "url": "https://github.com/yourusername/stackphy"
+    }
+  },
+  "randomVariables": {
+    "tree": {
+      "distribution": {
+        "type": "Yule",
+        "generates": "TREE",
+        "parameters": {
+          "birthRate": {
+            "variable": "birth_rate"
+          }
+        }
+      }
+    },
+    "freqs": {
+      "distribution": {
+        "type": "Dirichlet",
+        "generates": "REAL_VECTOR",
+        "parameters": {
+          "alpha": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "kappa": {
+      "distribution": {
+        "type": "Lognormal",
+        "generates": "REAL",
+        "parameters": {
+          "meanlog": 1.0,
+          "sdlog": 0.5
+        }
+      }
+    },
+    "seq": {
+      "distribution": {
+        "type": "PhyloCTMC",
+        "generates": "ALIGNMENT",
+        "parameters": {
+          "tree": {
+            "variable": "tree"
+          },
+          "Q": {
+            "variable": "subst_model"
+          }
+        }
+      },
+      "observedValue": {
+        "human": "ACGTACGTACGTACGTACGTACGT",
+        "chimp": "ACGTACGTACGTACGTATGTACGT",
+        "gorilla": "ACGTACGTACGCACGTACGTACGT"
+      }
+    },
+    "birth_rate": {
+      "distribution": {
+        "type": "Exponential",
+        "generates": "REAL",
+        "parameters": {
+          "rate": 0.1
+        }
+      }
+    }
+  },
+  "deterministicFunctions": {
+    "subst_model": {
+      "function": "hky",
+      "arguments": {
+        "kappa": {
+          "variable": "kappa"
+        },
+        "frequencies": {
+          "variable": "freqs"
+        }
+      }
+    }
+  }
+}

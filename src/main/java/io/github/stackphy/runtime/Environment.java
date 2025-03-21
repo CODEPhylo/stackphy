@@ -1,6 +1,7 @@
 package io.github.stackphy.runtime;
 
 import io.github.stackphy.model.StackItem;
+import io.github.stackphy.model.UserFunction;
 import io.github.stackphy.model.Variable;
 
 import java.util.HashMap;
@@ -12,6 +13,7 @@ import java.util.Set;
  */
 public class Environment {
     private final Map<String, Variable> variables = new HashMap<>();
+    private final Map<String, UserFunction> functions = new HashMap<>();
     
     /**
      * Defines a new variable in the environment.
@@ -107,6 +109,44 @@ public class Environment {
         }
         
         return deterministicVars;
+    }
+    
+    /**
+     * Defines a user function in the environment.
+     * 
+     * @param function The user function to define
+     */
+    public void defineFunction(UserFunction function) {
+        functions.put(function.getName(), function);
+    }
+    
+    /**
+     * Gets a user function from the environment.
+     * 
+     * @param name The function name
+     * @return The function, or null if not found
+     */
+    public UserFunction getFunction(String name) {
+        return functions.get(name);
+    }
+    
+    /**
+     * Checks if a function exists in the environment.
+     * 
+     * @param name The function name
+     * @return true if the function exists, false otherwise
+     */
+    public boolean hasFunction(String name) {
+        return functions.containsKey(name);
+    }
+    
+   /**
+     * Gets all functions in the environment.
+     * 
+     * @return A map of function names to functions
+     */
+    public Map<String, UserFunction> getFunctions() {
+        return new HashMap<>(functions);
     }
     
     /**

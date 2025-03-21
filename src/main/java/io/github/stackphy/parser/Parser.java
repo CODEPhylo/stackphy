@@ -5,8 +5,9 @@ import io.github.stackphy.functions.*;
 import io.github.stackphy.model.*;
 import io.github.stackphy.runtime.Environment;
 import io.github.stackphy.runtime.Stack;
-import io.github.stackphy.substitution.*;
 import io.github.stackphy.types.*;
+import io.github.stackphy.substitution.*;
+import io.github.stackphy.constraints.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,6 +22,8 @@ public class Parser {
     private final List<Token> tokens;
     private int position;
     private final Map<String, NamedOperation.OperationExecutor> operations;
+    private boolean inStackCommentMode;
+    private StringBuilder stackCommentBuilder;
     
     /**
      * Creates a new parser for the given tokens.
@@ -31,6 +34,8 @@ public class Parser {
         this.tokens = tokens;
         this.position = 0;
         this.operations = new HashMap<>();
+        this.inStackCommentMode = false;
+        this.stackCommentBuilder = new StringBuilder();
         registerOperations();
     }
     
@@ -68,8 +73,68 @@ public class Parser {
                     operation = new ValueOperation("ARRAY_MARKER", token.getLine(), token.getColumn());
                     break;
                 
+                case FUNCTION_START:
+                    // Start of a function definition
+                    operation = new FunctionStartOperation(token.getLine(), token.getColumn());
+                    break;
+                    
+                case FUNCTION_END:
+                    // End of a function definition
+                    operation = new FunctionEndOperation(token.getLine(), token.getColumn());
+                    break;
+                    
+                case IDENTIFIER:
+                    // User identifier - could be a variable name or a function call
+                    String name = token.getValue();
+                    
+                    // Check if it's a function definition (following a FUNCTION_START)
+                    if (!operations.isEmpty() && operations.get(operations.size() - 1) instanceof FunctionStartOperation) {
+                        operation = new FunctionNameOperation(name, token.getLine(), token.getColumn());
+                    } else {
+                        // Check if it's a user-defined function call
+                        // This will be resolved at runtime
+                        operation = new FunctionCallUserOperation(name, token.getLine(), token.getColumn());
+                    	// but this should check if the function exists and fail otherwise!
+                    	// throw new StackPhyException("Unexpected identifier: " + token.getValue(), token.getLine(), token.getColumn());
+
+                    }   
+                    break;
+                
+                case PAREN_OPEN:
+                    // Start stack comment mode
+                    inStackCommentMode = true;
+                    stackCommentBuilder = new StringBuilder();
+                    // No operation created for opening parenthesis - it's part of the comment
+                    break;
+                
+                case PAREN_CLOSE:
+                    if (inStackCommentMode) {
+                        // End of stack comment
+                        inStackCommentMode = false;
+                        operation = new StackCommentOperation(stackCommentBuilder.toString().trim(), 
+                                                             token.getLine(), token.getColumn());
+                    } else {
+                        // Regular closing parenthesis operation (if that's valid in your language)
+                        operation = new ValueOperation(")", token.getLine(), token.getColumn());
+                    }
+                    break;
+                    
+                // Add a special case for dash tokens in the switch statement
+                case DASH:
+                    // If we're in stack comment parsing mode, include it as part of the comment
+                    // Otherwise, treat it as an operation
+                    if (inStackCommentMode) {
+                        // Add to stack comment string
+                        stackCommentBuilder.append("-");
+                    } else {
+                        // Handle as operation
+                        operation = new NamedOperation("dash", this.operations.get("dash"), token.getLine(), token.getColumn());
+                    }
+                    break;      
+                
                 case BRACKET_CLOSE:
                 case TILDE:
+                case MULTIPLY:              
                 case EQUAL:
                 case VAR:
                 case OBSERVE:
@@ -97,6 +162,7 @@ public class Parser {
                 case LG:
                 case GY94:
                 case DISCRETE_GAMMA:
+                case DISCRETE_GAMMA_VECTOR:
                 case FREE_RATES:
                 case INVARIANT_SITES:
                 case STRICT_CLOCK:
@@ -132,18 +198,14 @@ public class Parser {
                 case CALIBRATION:
                 case CONSTRAINT:
                     // Named operation
-                    String name = token.getValue().toLowerCase(); // PhyloSpec operations are case-insensitive
-                    if (this.operations.containsKey(name)) {
-                        operation = new NamedOperation(name, this.operations.get(name), token.getLine(), token.getColumn());
+                    String operationName = token.getValue().toLowerCase(); // PhyloSpec operations are case-insensitive
+                    if (this.operations.containsKey(operationName)) {
+                        operation = new NamedOperation(operationName, this.operations.get(operationName), token.getLine(), token.getColumn());
                     } else {
-                        throw new StackPhyException("Unknown operation: " + name, token.getLine(), token.getColumn());
+                        throw new StackPhyException("Unknown operation: " + operationName, token.getLine(), token.getColumn());
                     }
                     break;
-                
-                case IDENTIFIER:
-                    // For user-defined identifiers
-                    throw new StackPhyException("Unexpected identifier: " + token.getValue(), token.getLine(), token.getColumn());
-                
+                                
                 case ERROR:
                     throw new StackPhyException("Syntax error: " + token.getValue(), token.getLine(), token.getColumn());
                 
@@ -152,13 +214,52 @@ public class Parser {
                     return operations;
                 
                 default:
-                    throw new StackPhyException("Unexpected token: " + token, token.getLine(), token.getColumn());
+                    // Check if it's a known operation
+                    String opName = token.getValue().toLowerCase();
+                    if (this.operations.containsKey(opName)) {
+                        operation = new NamedOperation(opName, this.operations.get(opName), token.getLine(), token.getColumn());
+                    } else {
+                        throw new StackPhyException("Unknown operation: " + token.getValue(), token.getLine(), token.getColumn());
+                    }
+                    break;
             }
             
-            operations.add(operation);
+            if (operation != null) {
+                operations.add(operation);
+            }
         }
         
         return operations;
+    }
+    
+    // Handle stack comments after FUNCTION_START and function name
+    private Operation parseStackComment() throws StackPhyException {
+        // Check for opening parenthesis
+        if (peek().getType() != TokenType.PAREN_OPEN) {
+            return null; // No stack comment
+        }
+        
+        // Skip the opening parenthesis
+        advance();
+        
+        // Collect everything until the closing parenthesis
+        StringBuilder comment = new StringBuilder();
+        int line = peek().getLine();
+        int column = peek().getColumn();
+        
+        while (!isAtEnd() && peek().getType() != TokenType.PAREN_CLOSE) {
+            comment.append(advance().getValue()).append(" ");
+        }
+        
+        // Expect the closing parenthesis
+        if (isAtEnd() || peek().getType() != TokenType.PAREN_CLOSE) {
+            throw new StackPhyException("Unterminated stack comment", line, column);
+        }
+        
+        // Skip the closing parenthesis
+        advance();
+        
+        return new StackCommentOperation(comment.toString().trim(), line, column);
     }
     
     /**
@@ -220,6 +321,26 @@ public class Parser {
             }
             
             env.defineVariable(name, value, true);
+        });
+        
+        operations.put("*", (stack, env) -> {
+            // Pop two values from the stack
+            StackItem b = stack.pop();
+            StackItem a = stack.pop();
+            
+            // Both should be numeric values
+            if (a instanceof Primitive && b instanceof Primitive) {
+                Primitive pa = (Primitive) a;
+                Primitive pb = (Primitive) b;
+                
+                if (pa.isNumeric() && pb.isNumeric()) {
+                    double result = pa.getDoubleValue() * pb.getDoubleValue();
+                    stack.push(new Primitive(result));
+                    return;
+                }
+            }
+            
+            throw new IllegalArgumentException("Multiplication requires two numeric values");
         });
 
         operations.put("=", (stack, env) -> {
@@ -395,7 +516,7 @@ public class Parser {
             // FossilBirthDeath distribution (to be implemented)
             throw new UnsupportedOperationException("FossilBirthDeath process not yet implemented");
         });
-                
+                                
         // Nucleotide substitution models (PhyloSpec-compliant)
         operations.put("jc69", (stack, env) -> {
             // PhyloSpec: JC69() -> QMatrix
@@ -422,13 +543,15 @@ public class Parser {
         });
         
         operations.put("hky", (stack, env) -> {
-            // PhyloSpec: HKY(kappa: PositiveReal, baseFrequencies: Simplex) -> QMatrix
             Parameter baseFreqs = stack.pop(Parameter.class);
             Parameter kappa = stack.pop(Parameter.class);
             
+            // Create the HKY model
             HKY model = new HKY(kappa, baseFreqs);
+                        
+            // Push the Q matrix, not the model itself
             stack.push(model);
-        });
+        });        
         
         operations.put("gtr", (stack, env) -> {
             // PhyloSpec: GTR(rateMatrix: Vector<PositiveReal>, baseFrequencies: Simplex) -> QMatrix
@@ -487,15 +610,28 @@ public class Parser {
             throw new UnsupportedOperationException("GY94 model not yet implemented");
         });
         
-        // Rate heterogeneity functions (PhyloSpec-compliant)
+        // Replace the existing discretegamma operation with this:
         operations.put("discretegamma", (stack, env) -> {
             // PhyloSpec: DiscreteGamma(shape: PositiveReal, categories: PosInteger) -> Vector<PositiveReal>
             Parameter categories = stack.pop(Parameter.class);
             Parameter shape = stack.pop(Parameter.class);
             
-            // DiscreteGamma model (to be implemented)
-            throw new UnsupportedOperationException("DiscreteGamma model not yet implemented");
+            // Create DiscreteGamma distribution
+            DiscreteGamma dist = new DiscreteGamma(shape, categories);
+            stack.push(dist);
         });
+        
+        // Add a new operation for DiscreteGammaVector
+        operations.put("discretegammavector", (stack, env) -> {
+            // PhyloSpec: DiscreteGammaVector(shape: PositiveReal, categories: PosInteger, dimension: PosInteger) -> Vector<PositiveReal>
+            Parameter dimension = stack.pop(Parameter.class);
+            Parameter categories = stack.pop(Parameter.class);
+            Parameter shape = stack.pop(Parameter.class);
+            
+            // Create DiscreteGammaVector distribution with dimension
+            DiscreteGamma dist = new DiscreteGamma(shape, categories, dimension);
+            stack.push(dist);
+        });        
         
         operations.put("freerates", (stack, env) -> {
             // PhyloSpec: FreeRates(rates: Vector<PositiveReal>, weights: Simplex) -> Vector<PositiveReal>
@@ -557,26 +693,56 @@ public class Parser {
             throw new UnsupportedOperationException("treeHeight function not yet implemented");
         });
         
-        // Sequence evolution models (PhyloSpec-compliant)
         operations.put("phyloctmc", (stack, env) -> {
-            // PhyloSpec: PhyloCTMC<A>(tree: Tree, Q: QMatrix, siteRates: Vector<PositiveReal>?, branchRates: Vector<PositiveReal>?) -> Alignment<A>
+            // PhyloSpec: PhyloCTMC<A>(tree: Tree, Q: QMatrix, siteRates: Vector<PositiveReal>?, branchRates: Vector<PositiveReal>?)
             
-            // Check how many parameters we have
-            // Our current PhyloCTMC constructor only supports tree and substModel (2 params)
-            // or tree, substModel, siteRates, branchRates (4 params)
+            // First check how many parameters we have
+            int paramCount = 0;
+            if (stack.size() >= 3) paramCount = 3;
             
-            // Check if we have the siteRates parameter on the stack
-            StackItem potentialSiteRates = null;
-            if (stack.size() >= 3) {
-                potentialSiteRates = stack.peek();
+            // Pop parameters based on what's available
+            Parameter siteRates = null;
+            
+            // If we have a third parameter (siteRates), pop it
+            if (paramCount >= 3) {
+                siteRates = stack.pop(Parameter.class);
+                
+                // If it's a variable, resolve it
+                if (siteRates instanceof Variable) {
+                    Variable siteRatesVar = (Variable) siteRates;
+                    siteRates = (Parameter) siteRatesVar.getValue();
+                }
             }
             
-            // Based on PhyloCTMC constructors, we either need 2 or 4 parameters
+            // Get substitution model parameter
             Parameter substModel = stack.pop(Parameter.class);
+            
+            // If it's a variable, resolve it to get the actual model
+            if (substModel instanceof Variable) {
+                Variable substModelVar = (Variable) substModel;
+                substModel = (Parameter) substModelVar.getValue();
+            }
+            
+            // Get tree parameter
             Parameter tree = stack.pop(Parameter.class);
             
-            // Create PhyloCTMC model with only required parameters
-            PhyloCTMC model = new PhyloCTMC(tree, substModel);
+            // If it's a variable, resolve it
+            if (tree instanceof Variable) {
+                Variable treeVar = (Variable) tree;
+                tree = (Parameter) treeVar.getValue();
+            }
+            
+            // Now create the PhyloCTMC model
+            PhyloCTMC model;
+            
+            if (siteRates != null) {
+                // Call the 4-parameter constructor with null clockRate
+                model = new PhyloCTMC(tree, substModel, siteRates, null);
+            } else {
+                // Call the 2-parameter constructor
+                model = new PhyloCTMC(tree, substModel);
+            }
+            
             stack.push(model);
         });
                 
@@ -644,14 +810,14 @@ public class Parser {
             stack.push(sequence);
         });
         
-        // Constraint functions (PhyloSpec-compliant)
         operations.put("lessthan", (stack, env) -> {
             // PhyloSpec: LessThan(left: Real, right: Real) -> Constraint
             Parameter right = stack.pop(Parameter.class);
             Parameter left = stack.pop(Parameter.class);
             
-            // LessThan constraint (to be implemented)
-            throw new UnsupportedOperationException("LessThan constraint not yet implemented");
+            // Create LessThan constraint
+            LessThan constraint = new LessThan(left, right);
+            stack.push(constraint);
         });
         
         operations.put("greaterthan", (stack, env) -> {

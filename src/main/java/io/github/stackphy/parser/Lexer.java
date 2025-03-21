@@ -75,6 +75,7 @@ public class Lexer {
         
         // Rate heterogeneity
         KEYWORDS.put("DiscreteGamma", TokenType.DISCRETE_GAMMA);
+        KEYWORDS.put("DiscreteGammaVector", TokenType.DISCRETE_GAMMA_VECTOR);
         KEYWORDS.put("FreeRates", TokenType.FREE_RATES);
         KEYWORDS.put("InvariantSites", TokenType.INVARIANT_SITES);
         KEYWORDS.put("StrictClock", TokenType.STRICT_CLOCK);
@@ -117,7 +118,8 @@ public class Lexer {
     private int position;
     private int line;
     private int column;
-    
+    private boolean inFunctionDefinition = false;
+   
     /**
      * Creates a new lexer for the given source code.
      * 
@@ -162,7 +164,17 @@ public class Lexer {
                 tokens.add(new Token(TokenType.COMMA, ",", line, column));
                 advance();
             } else if (c == ':') {
-                tokens.add(new Token(TokenType.COLON, ":", line, column));
+                // This is a function definition start
+                tokens.add(new Token(TokenType.FUNCTION_START, ":", line, column));
+                inFunctionDefinition = true;
+                advance();
+            } else if (c == ';') {
+                // This is a function definition end
+                tokens.add(new Token(TokenType.FUNCTION_END, ";", line, column));
+                inFunctionDefinition = false;
+                advance();
+            } else if (c == '*') {
+                tokens.add(new Token(TokenType.MULTIPLY, "*", line, column));
                 advance();
             } else if (c == '~') {
                 tokens.add(new Token(TokenType.TILDE, "~", line, column));
@@ -172,7 +184,17 @@ public class Lexer {
                 advance();
             } else if (c == '"') {
                 tokens.add(lexString());
-            } else if (Character.isDigit(c) || c == '+' || c == '-' || c == '.') {
+            } else if (c == '-') {
+                // Check if next char is a digit (negative number)
+                if (position + 1 < source.length() && Character.isDigit(source.charAt(position + 1))) {
+                    tokens.add(lexNumber());
+                } else {
+                    // It's just a dash token
+                    tokens.add(new Token(TokenType.DASH, "-", line, column));
+                    advance();
+                }
+            }
+            else if (Character.isDigit(c) || c == '+' || c == '.') {
                 tokens.add(lexNumber());
             } else if (Character.isLetter(c) || c == '_') {
                 tokens.add(lexIdentifier());

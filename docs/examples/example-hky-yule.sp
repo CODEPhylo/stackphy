@@ -43,9 +43,10 @@ Yule    // Create Yule process (capitalized)
 // Create rate variation across sites
 0.5     // Shape parameter
 4       // Number of categories
-DiscreteGamma
+24      // Number of sites (length of the alignment)
+DiscreteGammaVector  // Creates a vector of rates with specified dimension
 "siteRates" // Variable name
-=       // Define deterministic variable
+~       // Define stochastic variable (sampled from the distribution)
 
 // Create the PhyloCTMC model
 "phylogeny"  // Get tree parameter

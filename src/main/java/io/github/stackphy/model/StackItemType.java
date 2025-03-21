@@ -1,11 +1,15 @@
 package io.github.stackphy.model;
 
 /**
- * Enumeration of stack item types.
+ * Types of items that can be on the stack.
  */
 public enum StackItemType {
-    PARAMETER,      // Model parameter (variable or primitive)
+    PRIMITIVE,      // Basic types (number, string, etc.)
     DISTRIBUTION,   // Probability distribution
-    MODEL,          // Substitution model
-    SEQUENCE        // Sequence data
+    VARIABLE,       // Named variable
+    SEQUENCE,       // Biological sequence
+    MODEL,          // Substitution model or other model
+    CONSTRAINT,     // Model constraint
+    PARAMETER,      // Parameter (can be a variable, distribution, or primitive)
+    FUNCTION        // User-defined function definition
 }

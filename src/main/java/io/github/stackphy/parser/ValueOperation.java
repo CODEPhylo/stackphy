@@ -7,10 +7,8 @@ import io.github.stackphy.runtime.Stack;
 /**
  * Operation that pushes a value onto the stack.
  */
-public class ValueOperation implements Operation {
+public class ValueOperation extends AbstractOperation {
     private final Object value;
-    private final int line;
-    private final int column;
     
     /**
      * Creates a new value operation.
@@ -20,10 +18,10 @@ public class ValueOperation implements Operation {
      * @param column The column number where the operation was found
      */
     public ValueOperation(Object value, int line, int column) {
+        super(line, column);
         this.value = value;
-        this.line = line;
-        this.column = column;
     }
+
     
     @Override
     public void execute(Stack stack, Environment env) throws StackPhyException {
