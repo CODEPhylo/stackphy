@@ -32,4 +32,8 @@ public class Primitive implements Parameter {
     public Object getValue() {
         return value;
     }
+    
+    public String toString() {
+        return value.toString();
+    }
 }

@@ -7,6 +7,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.EmptyStackException;
 
 /**
@@ -119,8 +120,24 @@ public class Stack {
      */
     public void dup() {
         StackItem item = peek();
-        push(item);
-    }
+        
+        // Create a proper copy of the item instead of reusing the same reference
+        if (item instanceof Primitive) {
+            Primitive prim = (Primitive) item;
+            if (prim.isNumeric()) {
+                push(new Primitive(prim.getDoubleValue()));
+            } else if (prim.isString()) {
+                push(new Primitive(prim.getStringValue()));
+            } else {
+                // Fall back to reusing the reference if we can't determine the type
+                push(item);
+            }
+        } else {
+            // For non-primitive types, we might need specific copy logic
+            // For now, fall back to reusing the reference
+            push(item);
+        }
+    }   
     
     /**
      * Swaps the top two items on the stack.
@@ -148,43 +165,13 @@ public class Stack {
     }
     
     @Override
-public String toString() {
-    // Create a copy of the stack to avoid modifying it
-    Stack tempStack = new Stack();
-    StringBuilder sb = new StringBuilder("[");
-    
-    // Use a temporary list to avoid modifying the original stack
-    List<StackItem> items = new ArrayList<>();
-    
-    // Pop all items from the original stack
-    while (!isEmpty()) {
-        items.add(pop());
-    }
-    
-    // Rebuild the original stack and build string
-    for (int i = items.size() - 1; i >= 0; i--) {
-        StackItem item = items.get(i);
-        push(item);
-        tempStack.push(item);
-        
-        if (i < items.size() - 1) {
-            sb.append(", ");
+    public String toString() {
+        StringBuilder sb = new StringBuilder("Stack [bottom→top]: ");
+        Iterator<StackItem> it = stack.descendingIterator();
+        while (it.hasNext()) {
+            sb.append(it.next());
+            if (it.hasNext()) sb.append(", ");
         }
-        
-        // Add item description
-        if (item instanceof Primitive) {
-            Primitive p = (Primitive) item;
-            if (p.isString()) {
-                sb.append("\"").append(p.getStringValue()).append("\"");
-            } else {
-                sb.append(p.getValue());
-            }
-        } else {
-            sb.append(item.getClass().getSimpleName());
-        }
+        return sb.toString();
     }
-    
-    sb.append("]");
-    return sb.toString();
-}
 }

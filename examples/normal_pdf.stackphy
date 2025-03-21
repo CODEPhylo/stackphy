@@ -1,0 +1,34 @@
+: normalPdf ( sigma mu x -- pdf )
+  // You are calling 1 0 0 normalPdf,
+  // which puts [1 (bottom), 0, 0 (top)] on the stack.
+  // That is actually [sigma=1, mu=0, x=0].
+  // But our math code wants [x, mu, sigma].
+  // So reorder:
+
+  rot            // [ mu, x, sigma ]
+  rot            // [ x, sigma, mu ]
+  swap           // [ x, mu, sigma ]
+
+  // Now do the normal PDF math for (x - mu), etc.
+
+  // 1) Compute exp( -((x - mu)² / [2*sigma²]) )
+  over over      // [x, mu, sigma, x, mu, sigma]
+  -              // [x, mu, sigma, (x - mu), sigma]
+  dup *          // [x, mu, sigma, (x - mu)², sigma]
+  swap dup *     // [x, mu, sigma, (x - mu)², sigma²]
+  2 * /          // [x, mu, sigma, (x - mu)² / (2*sigma²)]
+  negate         // [x, mu, sigma, -((x - mu)² / (2*sigma²))]
+  exp            // [x, mu, sigma, e^(... )]
+
+  // 2) Multiply by 1 / (sigma * sqrt(2π))
+  swap           // [x, mu, e^(...), sigma]
+  2 pi * sqrt    // [x, mu, e^(...), sigma*sqrt(2π)]
+  *              // [x, mu, e^(...), sigma*sqrt(2π)]
+  1 swap /       // [x, mu, e^(...)/(sigma*sqrt(2π))]
+
+  // 3) Leave just pdf
+  drop drop      // [pdf]
+;
+
+// Test with standard normal at x=0
+0 0 1 normalPdf // Should give approximately 0.398942

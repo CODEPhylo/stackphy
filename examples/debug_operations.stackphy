@@ -1,0 +1,34 @@
+// Test functions for debugging stack operations
+
+// Test exp operation
+: testExp ( -- )
+  0             // Push 0 onto the stack
+  exp           // Should calculate e^0 = 1
+;
+
+// Test pi calculation
+: testPi ( -- )
+  pi            // Push π onto the stack
+;
+
+// Test division
+: testDiv ( -- )
+  1.0           // Push 1.0
+  2.5066        // Push approximate value of sqrt(2π)
+  /             // Should give roughly 0.3989
+;
+
+// Test over operation
+: testOver ( -- )
+  1.0 2.0       // Push 1.0 and 2.0
+  over          // Should duplicate 1.0 on top: [1.0, 2.0, 1.0]
+;
+
+// Test the pick operation
+: testPick ( -- )
+  1.0 2.0 3.0   // Push 1.0, 2.0, 3.0
+  2 pick        // Should get item at position 2 (0-based): [1.0, 2.0, 3.0, 1.0]
+;
+
+// Run one of the tests
+testDiv

@@ -1,0 +1,15 @@
+: testOps ( a b c -- result )
+  // Test basic stack operations
+  dup        // [a, b, c, c]
+  drop       // [a, b, c]
+  swap       // [a, c, b]
+  rot        // [c, b, a]
+  over       // [c, b, a, b]
+  rot        // [c, a, b, b]
+  -          // [c, a, 0]
+  swap       // [c, 0, a]
+  +          // [c, a]
+  *          // [c*a]
+;
+
+1 2 3 testOps

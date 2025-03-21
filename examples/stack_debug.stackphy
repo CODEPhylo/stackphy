@@ -1,0 +1,54 @@
+// Helper function to print and retain stack contents
+: debug ( -- )
+  // This function would need debugging information added to your language
+  // It should print the current stack without modifying it
+  // For now, we just do nothing
+;
+
+// Test with standard normal
+: testNormalPdf ( -- )
+  0 0 1          // [x=0, mu=0, sigma=1]
+  debug
+  
+  // Save denominator: sigma * sqrt(2π)
+  dup             // [0, 0, 1, 1]
+  debug
+  2 pi * sqrt     // [0, 0, 1, sqrt(2π)]
+  debug
+  *               // [0, 0, sigma*sqrt(2π)]
+  debug
+  swap            // [0, sigma*sqrt(2π), 0]
+  debug
+  
+  // Calculate 2*sigma²
+  dup *           // [0, sigma*sqrt(2π), 0, 0]
+  debug
+  2 *             // [0, sigma*sqrt(2π), 0, 0]
+  debug
+  
+  // Calculate (x-mu)²
+  rot rot         // [sigma*sqrt(2π), 0, 0]
+  debug
+  -               // [sigma*sqrt(2π), 0]
+  debug
+  dup *           // [sigma*sqrt(2π), 0]
+  debug
+  
+  // Calculate exponent: -(x-mu)²/(2*sigma²)
+  swap            // [0, sigma*sqrt(2π)]
+  debug
+  /               // [0]
+  debug
+  negate          // [-0]
+  debug
+  exp             // [1.0]
+  debug
+  
+  // Final division
+  swap            // [1.0, sigma*sqrt(2π)]
+  debug
+  /               // [1.0/sigma*sqrt(2π)]
+  debug
+;
+
+testNormalPdf     // Should give approximately 0.398942

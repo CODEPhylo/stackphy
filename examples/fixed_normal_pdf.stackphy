@@ -1,0 +1,23 @@
+: normalPdf ( sigma mu x -- pdf )
+  // First compute (x-mu)
+  swap -      // [sigma, (x-mu)]
+  
+  // Then divide by sigma to get z = (x-mu)/sigma
+  swap /      // [z]
+  
+  // Now compute e^(-z^2/2)
+  dup *       // [z^2]
+  2 /         // [z^2/2]
+  negate      // [-z^2/2]
+  exp         // [e^(-z^2/2)]
+  
+  // Compute 1/sqrt(2π)
+  2 pi * sqrt // [e^..., sqrt(2π)]
+  1 swap /    // [e^..., 1/sqrt(2π)]
+  
+  // Multiply to get final result
+  *           // [normalPdf]
+;
+
+// Test with standard normal at x=0
+1 -1 0 normalPdf // Should give approximately 0.398942

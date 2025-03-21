@@ -1,0 +1,12 @@
+// Simplified version for standard normal PDF
+: standardNormalPdf ( x -- pdf )
+  dup *         // x^2
+  -0.5 *        // -0.5*x^2
+  exp           // e^(-0.5*x^2)
+  2 pi *        // Get 2π
+  sqrt          // Get sqrt(2π)
+  /             // Divide by sqrt(2π)
+;
+
+// Test with x=0
+0 standardNormalPdf // Should give approximately 0.398942

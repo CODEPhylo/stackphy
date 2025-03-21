@@ -132,8 +132,12 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
             operations.add(createNamedOperation("swap", line, column));
         } else if (ctx.rot() != null) {
             operations.add(createNamedOperation("rot", line, column));
+        } else if (ctx.pick() != null) {
+            operations.add(createNamedOperation("pick", line, column));
         } else if (ctx.drop() != null) {
             operations.add(createNamedOperation("drop", line, column));
+        } else if (ctx.over() != null) {
+            operations.add(createNamedOperation("over", line, column));
         } else if (ctx.getText().equals("~")) {
             operations.add(createNamedOperation("~", line, column));
         } else if (ctx.getText().equals("=")) {
@@ -142,6 +146,14 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
             operations.add(createNamedOperation("var", line, column));
         } else if (ctx.observe() != null) {
             operations.add(createNamedOperation("observe", line, column));
+        } else if (ctx.getText().equals("exp")) {
+            operations.add(createNamedOperation("exp", line, column));
+        } else if (ctx.getText().equals("pi")) {
+            operations.add(createNamedOperation("pi", line, column));
+        } else if (ctx.getText().equals("sqrt")) {
+            operations.add(createNamedOperation("sqrt", line, column));
+        } else if (ctx.getText().equals("negate")) {
+            operations.add(createNamedOperation("negate", line, column));
         } else if (ctx.getText().equals("*")) {
             operations.add(createNamedOperation("*", line, column));
         } else if (ctx.getText().equals("+")) {
@@ -279,8 +291,31 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
                             // Now the item we want to pick is at the top of the stack
                             io.github.stackphy.model.StackItem itemToPick = stack.peek();
                             
-                            // Push a copy of the picked item to the stack
-                            stack.push(itemToPick.copy());
+                            // Create a new copy based on the type of the item
+                            io.github.stackphy.model.StackItem copiedItem;
+                            if (itemToPick instanceof io.github.stackphy.model.Primitive) {
+                                // For primitives, create a new primitive with the same value
+                                io.github.stackphy.model.Primitive primItem = (io.github.stackphy.model.Primitive) itemToPick;
+                                if (primItem.isNumeric()) {
+                                    copiedItem = new io.github.stackphy.model.Primitive(primItem.getDoubleValue());
+                                } else if (primItem.isString()) {
+                                    copiedItem = new io.github.stackphy.model.Primitive(primItem.getStringValue());
+                                } else {
+                                    // Fall back to string representation for other types
+                                    copiedItem = new io.github.stackphy.model.Primitive(primItem.toString());
+                                }
+                            } else if (itemToPick instanceof io.github.stackphy.model.UserFunction) {
+                                // For user functions, it's typically not a good idea to duplicate them,
+                                // but we could use the same reference if needed
+                                copiedItem = itemToPick;
+                            } else {
+                                // For other types, you may need to implement specific copying logic
+                                // For now, we'll just use the same reference (not a true copy)
+                                copiedItem = itemToPick;
+                            }
+                            
+                            // Push the copied item to the stack
+                            stack.push(copiedItem);
                             
                             // Push back all the items we popped in reverse order
                             for (int i = tempItems.size() - 1; i >= 0; i--) {
@@ -454,6 +489,8 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
                         break;
                     case "sqrt":
                         customExecutor = (stack, env) -> {
+                            System.out.println("SQRT: stack before = " + stack);
+
                             // Square root of the top item
                             io.github.stackphy.model.StackItem a = stack.pop();
                             
@@ -467,6 +504,7 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
                                     }
                                     double result = Math.sqrt(value);
                                     stack.push(new io.github.stackphy.model.Primitive(result));
+                                    System.out.println("SQRT: stack after = " + stack);
                                     return;
                                 }
                             }
@@ -477,6 +515,7 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
                     case "exp":
                         customExecutor = (stack, env) -> {
                             // Exponential of the top item
+                            System.out.println("EXP: stack before = " + stack);
                             io.github.stackphy.model.StackItem a = stack.pop();
                             
                             if (a instanceof io.github.stackphy.model.Primitive) {
@@ -484,7 +523,9 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
                                 
                                 if (pa.isNumeric()) {
                                     double result = Math.exp(pa.getDoubleValue());
+                                    System.out.println("EXP: calculating e^" + pa.getDoubleValue() + " = " + result);
                                     stack.push(new io.github.stackphy.model.Primitive(result));
+                                    System.out.println("EXP: stack after = " + stack);
                                     return;
                                 }
                             }
@@ -495,7 +536,9 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
                     case "pi":
                         customExecutor = (stack, env) -> {
                             // Push π onto the stack
+                            System.out.println("PI: stack before = " + stack);
                             stack.push(new io.github.stackphy.model.Primitive(Math.PI));
+                            System.out.println("PI: stack after = " + stack);
                         };
                         break;
                 }

@@ -37,6 +37,7 @@ operation
     | rot
     | nip
     | tuck
+    | pick
     | '~'
     | '='
     | var
@@ -120,6 +121,7 @@ over : 'over' ;
 rot : 'rot' ;
 nip : 'nip' ;
 tuck : 'tuck' ;
+pick : 'pick' ;  // Added lexer token for "pick"
 var : 'var' ;
 observe : 'observe' ;
 

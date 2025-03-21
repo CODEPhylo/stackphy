@@ -1,0 +1,11 @@
+// Extremely simplified standard normal PDF (x=0, mu=0, sigma=1)
+// Standard normal PDF at x=0 is 1/sqrt(2π) ≈ 0.3989...
+
+: standardNormal ( -- pdf )
+  // Direct calculation of 1/sqrt(2π)
+  2 pi *    // [2π]
+  sqrt      // [sqrt(2π)]
+  1 swap /  // [1/sqrt(2π)]
+;
+
+standardNormal  // Should give approximately 0.398942
