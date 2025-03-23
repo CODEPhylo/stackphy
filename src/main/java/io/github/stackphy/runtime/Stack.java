@@ -120,23 +120,7 @@ public class Stack {
      */
     public void dup() {
         StackItem item = peek();
-        
-        // Create a proper copy of the item instead of reusing the same reference
-        if (item instanceof Primitive) {
-            Primitive prim = (Primitive) item;
-            if (prim.isNumeric()) {
-                push(new Primitive(prim.getDoubleValue()));
-            } else if (prim.isString()) {
-                push(new Primitive(prim.getStringValue()));
-            } else {
-                // Fall back to reusing the reference if we can't determine the type
-                push(item);
-            }
-        } else {
-            // For non-primitive types, we might need specific copy logic
-            // For now, fall back to reusing the reference
-            push(item);
-        }
+        push(item);
     }   
     
     /**

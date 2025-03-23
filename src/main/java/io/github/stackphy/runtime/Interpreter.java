@@ -1,5 +1,6 @@
 package io.github.stackphy.runtime;
 
+import io.github.stackphy.model.StackItem;
 import io.github.stackphy.model.UserFunction;
 import io.github.stackphy.parser.*;
 import java.util.ArrayList;
@@ -143,7 +144,8 @@ public class Interpreter {
     }
     
     /**
-     * Clears the stack and environment.
+     * Clears the s
+     * tack and environment.
      */
     public void clear() {
         stack.clear();
