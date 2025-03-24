@@ -83,6 +83,15 @@
                             <mainClass>io.github.stackphy.ExportCommand</mainClass>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>repl</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>io.github.stackphy.StackPhyRepl</mainClass>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>

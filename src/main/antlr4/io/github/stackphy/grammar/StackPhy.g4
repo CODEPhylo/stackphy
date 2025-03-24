@@ -16,13 +16,12 @@ functionDefinition
     : ':' IDENTIFIER stackEffect? statement* ';'
     ;
 
-// Stack effect notation - proper parsing of inputs and outputs
 stackEffect
-    : '(' inputParams '--' outputDescription ')'
+    : '(' inputParams STACK_SEPARATOR outputDescription ')'
     ;
-
+    
 inputParams
-    : IDENTIFIER (IDENTIFIER)*   // One or more input parameters
+    : (IDENTIFIER)*   // Zero or more input parameters
     ;
 
 outputDescription
@@ -137,6 +136,8 @@ IDENTIFIER : [a-zA-Z_][a-zA-Z0-9_]* ;
 
 // Comments
 COMMENT : '//' ~[\r\n]* ;
+
+STACK_SEPARATOR : '--' ;
 
 // Whitespace - skip it in the lexer
 WS : [ \t\r\n]+ -> skip ;

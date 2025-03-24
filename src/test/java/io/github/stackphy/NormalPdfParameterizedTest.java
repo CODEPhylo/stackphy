@@ -55,15 +55,20 @@ public class NormalPdfParameterizedTest {
     @Test
     public void testNormalPdf() throws Exception {
         String program = ": normalPdf ( sigma mu x -- pdf )\n" +
-                         "  swap -\n" +
-                         "  swap /\n" +
-                         "  dup *\n" +
-                         "  2 /\n" +
-                         "  negate\n" +
-                         "  exp\n" +
-                         "  2 pi * sqrt\n" +
-                         "  1 swap /\n" +
-                         "  *\n" +
+                         "  swap -        // Calculate (x-mu)\n" +
+                         "  swap dup rot  // Duplicate sigma for later\n" +
+                         "  dup *         // Square (x-mu): (x-mu)²\n" +
+                         "  swap dup *    // Square σ: σ²\n" +
+                         "  2 *           // Multiply by 2: 2σ²\n" +
+                         "  /             // Stack: sigma (x-mu)^2/(2*sigma^2)\n" +
+                         "  negate        // Stack: sigma -(x-mu)^2/(2*sigma^2)\n" +
+                         "  exp           // Stack: sigma e^(-(x-mu)^2/(2*sigma^2))\n" +
+                         "  swap          // Stack: e^(...) sigma\n" +
+                         "  2 pi *        // Stack: e^(...) sigma 2*pi\n" +
+                         "  sqrt          // Stack: e^(...) sigma sqrt(2*pi)\n" +
+                         "  *             // Stack: e^(...) sigma*sqrt(2*pi)\n" +
+                         "  1 swap /      // Stack: e^(...) 1/(sigma*sqrt(2*pi))\n" +
+                         "  *             // Final result\n" +
                          ";\n" +
                          sigma + " " + mu + " " + x + " normalPdf";
         
