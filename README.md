@@ -10,6 +10,7 @@ StackPhy uses a stack-based paradigm for model construction. The language is des
 - **Explicit**: Stack operations make data flow explicit
 - **Expressive**: Support for common phylogenetic model components
 - **Composable**: Easy to combine different model components
+- **Extensible**: User-defined functions allow for code reuse
 - **PhyloSpec-compliant**: Follows the PhyloSpec reference standard
 
 ## Quick Start
@@ -36,6 +37,26 @@ StackPhy uses a stack-based paradigm for model construction. The language is des
 
 // Attach observed sequence data
 [ "human" "ACGTTGCA..." sequence "chimp" "ACGTTGCA..." sequence ] "sequences" observe
+```
+
+## User-Defined Functions
+
+StackPhy now supports user-defined functions for code reuse and abstraction:
+
+```
+// Define a function to create a standard normal distribution
+: standardNormal ( -- dist )
+    0.0 1.0 Normal
+;
+
+// Define a function to create rate heterogeneity with 4 categories
+: gamma4 ( alpha -- rates )
+    4 DiscreteGamma
+;
+
+// Use the functions
+standardNormal "x" ~  // Creates x ~ Normal(0, 1)
+0.5 gamma4 "siteRates" =  // Creates siteRates = DiscreteGamma(0.5, 4)
 ```
 
 ## Installation
@@ -71,11 +92,15 @@ Full documentation is available in the `docs/` directory:
 ## Features
 
 - **Type System**: Real, Integer, PositiveReal, Probability, Tree, TimeTree, etc.
-- **Substitution Models**: HKY, GTR, JC69, F81
-- **Tree Priors**: Yule, BirthDeath, Coalescent
-- **Distributions**: Normal, LogNormal, Exponential, Gamma, Dirichlet, Beta
-- **Rate Heterogeneity**: DiscreteGamma, InvariantSites
+- **Substitution Models**: HKY, GTR, JC69, F81, K80, WAG, JTT, LG, GY94
+- **Tree Priors**: Yule, BirthDeath, Coalescent, FossilBirthDeath
+- **Distributions**: Normal, LogNormal, Exponential, Gamma, Dirichlet, Beta, Uniform
+- **Rate Heterogeneity**: DiscreteGamma, FreeRates, InvariantSites
+- **Molecular Clocks**: StrictClock, UncorrelatedLognormal, UncorrelatedExponential
 - **Constraints**: LessThan, GreaterThan, Bounded, Equals
+- **Stack Operations**: dup, swap, drop, over, rot, nip, tuck, pick
+- **Math Operations**: +, -, *, /, log, exp, sum, product, scale, normalize
+- **User-Defined Functions**: Custom function definitions with stack effect declarations
 - **Sequence Operations**: DNA/RNA/Protein sequence handling
 
 ## PhyloSpec Compliance
