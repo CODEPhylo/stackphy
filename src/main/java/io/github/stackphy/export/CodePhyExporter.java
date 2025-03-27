@@ -156,24 +156,28 @@ public class CodePhyExporter {
     private JsonObject convertDistribution(Distribution distribution) {
         JsonObject distJson = new JsonObject();
         
-        // Set distribution type based on the class
+        // Get distribution type
         String distributionType = distribution.getDistributionType();
-        String capitalized = distributionType.substring(0, 1).toUpperCase() + distributionType.substring(1);
-        distJson.addProperty("type", capitalized);
+        
+        // Map the distribution type to the proper CamelCaps PhyloSpec type
+        String phyloSpecType = mapDistributionTypeToPhyloSpec(distributionType);
+        distJson.addProperty("type", phyloSpecType);
         
         // Set the generates property based on the distribution type
         if (distribution instanceof PhyloCTMC) {
-            distJson.addProperty("generates", "ALIGNMENT");
+            distJson.addProperty("generates", "Alignment");
         } else if (distribution instanceof Yule || 
                   distribution instanceof BirthDeath || 
                   distribution instanceof Coalescent) {
-            distJson.addProperty("generates", "TREE");
+            distJson.addProperty("generates", "Tree");
         } else if (distribution instanceof Dirichlet) {
-            distJson.addProperty("generates", "REAL_VECTOR");
+            distJson.addProperty("generates", "Vector");
+        } else if (distribution instanceof DiscreteGamma) {
+            distJson.addProperty("generates", "Vector");
         } else {
-            distJson.addProperty("generates", "REAL");
-        }
-        
+            distJson.addProperty("generates", "Real");
+        }       
+         
         // Add parameters based on the distribution type
         JsonObject parameters = new JsonObject();
         
@@ -202,6 +206,16 @@ public class CodePhyExporter {
             }
             parameters.add("alpha", alpha);
         } 
+        else if (distribution instanceof DiscreteGamma) {
+            DiscreteGamma discreteGamma = (DiscreteGamma) distribution;
+            parameters.add("shape", convertParameter(discreteGamma.getShape()));
+            parameters.add("categories", convertParameter(discreteGamma.getCategories()));
+            
+            // Add dimension parameter if it's a DiscreteGammaVector
+            if (discreteGamma.getDimension() != null) {
+                parameters.add("dimension", convertParameter(discreteGamma.getDimension()));
+            }
+        }
         else if (distribution instanceof Gamma) {
             Gamma gamma = (Gamma) distribution;
             parameters.add("shape", convertParameter(gamma.getShape()));
@@ -237,6 +251,41 @@ public class CodePhyExporter {
         distJson.add("parameters", parameters);
         
         return distJson;
+    }
+    
+    /**
+     * Maps a distribution type string from the internal representation to the PhyloSpec CamelCaps form.
+     * 
+     * @param distributionType The internal distribution type name
+     * @return The PhyloSpec CamelCaps type name
+     */
+    private String mapDistributionTypeToPhyloSpec(String distributionType) {
+        // Map of internal distribution types to PhyloSpec types
+        Map<String, String> typeMap = new HashMap<>();
+        typeMap.put("normal", "Normal");
+        typeMap.put("logNormal", "LogNormal");
+        typeMap.put("exponential", "Exponential");
+        typeMap.put("gamma", "Gamma");
+        typeMap.put("dirichlet", "Dirichlet");
+        typeMap.put("beta", "Beta");
+        typeMap.put("uniform", "Uniform");
+        typeMap.put("yule", "Yule");
+        typeMap.put("birthDeath", "BirthDeath");
+        typeMap.put("coalescent", "Coalescent");
+        typeMap.put("phyloCTMC", "PhyloCTMC");
+        typeMap.put("phyloBM", "PhyloBM");
+        typeMap.put("phyloOU", "PhyloOU");
+        typeMap.put("discreteGamma", "DiscreteGamma");
+        typeMap.put("discreteGammaVector", "DiscreteGammaVector");
+        typeMap.put("freeRates", "FreeRates");
+        typeMap.put("invariantSites", "InvariantSites");
+        typeMap.put("strictClock", "StrictClock");
+        typeMap.put("uncorrelatedLognormal", "UncorrelatedLognormal");
+        typeMap.put("uncorrelatedExponential", "UncorrelatedExponential");
+        
+        // Return the mapped type if it exists, otherwise fallback to capitalized version
+        return typeMap.getOrDefault(distributionType, 
+               distributionType.substring(0, 1).toUpperCase() + distributionType.substring(1));
     }
     
     /**
@@ -295,17 +344,33 @@ public class CodePhyExporter {
         if (param instanceof Primitive) {
             Primitive primitive = (Primitive) param;
             if (primitive.isNumeric()) {
-                return new JsonPrimitive(primitive.getDoubleValue());
+                // Use the new isInteger() and isDouble() methods to determine the type
+                if (primitive.isInteger()) {
+                    // It's an integer, convert to int to avoid decimal point
+                    return new JsonPrimitive((int)primitive.getDoubleValue());
+                } else {
+                    // It's a double, keep the decimal point
+                    return new JsonPrimitive(primitive.getDoubleValue());
+                }
             } else if (primitive.isString()) {
                 return new JsonPrimitive(primitive.getStringValue());
             } else if (primitive.isArray()) {
                 JsonArray array = new JsonArray();
                 Object[] values = primitive.getArrayValue();
                 for (Object value : values) {
-                    if (value instanceof Number) {
-                        array.add(((Number) value).doubleValue());
+                    if (value instanceof Parameter) {
+                        // Use convertParameter recursively for nested Parameters
+                        array.add(convertParameter((Parameter)value));
+                    } else if (value instanceof Number) {
+                        if (value instanceof Integer) {
+                            // It's an integer, keep it as an integer
+                            array.add((Integer)value);
+                        } else {
+                            // It's a floating-point number
+                            array.add(((Number)value).doubleValue());
+                        }
                     } else if (value instanceof String) {
-                        array.add((String) value);
+                        array.add((String)value);
                     }
                 }
                 return array;

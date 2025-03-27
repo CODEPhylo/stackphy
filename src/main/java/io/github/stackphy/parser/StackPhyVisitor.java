@@ -182,6 +182,14 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
                 } else if (opName.equals("]")) {
                     operations.add(registry.createNamedOperation("]", line, column));
                 }
+            } else if (ctx.functionOperation() != null) {
+                // Handle built-in function operations
+                String opName = ctx.functionOperation().getText();
+                operations.add(registry.createNamedOperation(opName, line, column));
+            } else if (ctx.constraintOperation() != null) {
+                // Handle constraint operations
+                String opName = ctx.constraintOperation().getText();
+                operations.add(registry.createNamedOperation(opName, line, column));
             } else if (ctx.IDENTIFIER() != null) {
                 // Check if it's a variable/parameter reference in a function definition
                 String name = ctx.IDENTIFIER().getText();
@@ -208,6 +216,7 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
     
     @Override
     public List<Operation> visitValue(StackPhyParser.ValueContext ctx) {
+    
         List<Operation> operations = new ArrayList<>();
         int line = ctx.getStart().getLine();
         int column = ctx.getStart().getCharPositionInLine();
@@ -215,8 +224,25 @@ public class StackPhyVisitor extends StackPhyBaseVisitor<List<Operation>> {
         if (ctx.NUMBER() != null) {
             // Parse number
             String numberText = ctx.NUMBER().getText();
-            double value = Double.parseDouble(numberText);
-            operations.add(new ValueOperation(value, line, column));
+    
+            System.out.println("DEBUG: NUMBER token text = '" + numberText + "'");
+                
+            // Check if the number is an integer or a double
+            if (numberText.contains(".")) {
+                // It's a double
+                double value = Double.parseDouble(numberText);
+                operations.add(new ValueOperation(value, line, column));
+            } else {
+                // It's an integer
+                try {
+                    int value = Integer.parseInt(numberText);
+                    operations.add(new ValueOperation(value, line, column));
+                } catch (NumberFormatException e) {
+                    // If the integer is too large for int, parse as double
+                    double value = Double.parseDouble(numberText);
+                    operations.add(new ValueOperation(value, line, column));
+                }
+            }
         } else if (ctx.STRING() != null) {
             // Parse string (remove quotes)
             String stringText = ctx.STRING().getText();

@@ -18,7 +18,7 @@ public class ParserFactory {
     /**
      * The default parser type to use.
      */
-    private static ParserType defaultType = ParserType.CLASSIC;
+    private static ParserType defaultType = ParserType.ANTLR;
     
     /**
      * Sets the default parser type.

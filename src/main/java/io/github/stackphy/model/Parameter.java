@@ -52,6 +52,24 @@ public interface Parameter extends StackItem {
     }
     
     /**
+     * Returns whether this parameter's value can be represented as a double.
+     * 
+     * @return true if the value can be represented as a double, false otherwise
+     */
+    default boolean isInteger() {
+        return getValue() instanceof Integer;
+    }
+    
+    /**
+     * Returns whether this parameter's value can be represented as a double.
+     * 
+     * @return true if the value can be represented as a double, false otherwise
+     */
+    default boolean isDouble() {
+        return getValue() instanceof Double;
+    }
+    
+    /**
      * Gets the value as a string, if possible.
      * 
      * @return The string value

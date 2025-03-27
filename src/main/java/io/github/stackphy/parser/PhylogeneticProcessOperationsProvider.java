@@ -37,30 +37,19 @@ public class PhylogeneticProcessOperationsProvider implements OperationProvider 
         if (paramCount >= 3) {
             siteRates = stack.pop(Parameter.class);
             
-            // If it's a variable, resolve it
-            if (siteRates instanceof Variable) {
-                Variable siteRatesVar = (Variable) siteRates;
-                siteRates = (Parameter) siteRatesVar.getValue();
-            }
+            // Don't try to resolve the variable here - pass it directly to PhyloCTMC
+            // The PhyloCTMC class should handle both Variable and direct Parameter types
         }
         
         // Get substitution model parameter
         Parameter substModel = stack.pop(Parameter.class);
         
-        // If it's a variable, resolve it to get the actual model
-        if (substModel instanceof Variable) {
-            Variable substModelVar = (Variable) substModel;
-            substModel = (Parameter) substModelVar.getValue();
-        }
+        // Don't try to resolve the variable here
         
         // Get tree parameter
         Parameter tree = stack.pop(Parameter.class);
         
-        // If it's a variable, resolve it
-        if (tree instanceof Variable) {
-            Variable treeVar = (Variable) tree;
-            tree = (Parameter) treeVar.getValue();
-        }
+        // Don't try to resolve the variable here
         
         // Now create the PhyloCTMC model
         PhyloCTMC model;

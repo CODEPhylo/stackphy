@@ -48,6 +48,8 @@ operation
     | mathOperation
     | distributionOperation
     | arrayOperation
+    | functionOperation
+    | constraintOperation
     | IDENTIFIER // Function call or variable reference
     ;
 
@@ -63,6 +65,30 @@ mathOperation
     | 'negate'
     | 'sqrt'
     | 'pi'
+    ;
+
+functionOperation
+    : 'sequence'               
+    | 'mrca'                   
+    | 'treeAge'
+    | 'nodeAge'
+    | 'branchLength'
+    | 'distanceMatrix'
+    | 'descendantTaxa'
+    ;
+    
+constraintOperation
+    : 'LessThan'
+    | 'GreaterThan'
+    | 'Equals'
+    | 'Bounded'
+    | 'SumTo'
+    | 'Monophyly'
+    | 'Calibration'
+    | 'FixedTopology'
+    | 'MolecularClock'
+    | 'CompoundConstraint'
+    | 'Correlation'
     ;
 
 distributionOperation

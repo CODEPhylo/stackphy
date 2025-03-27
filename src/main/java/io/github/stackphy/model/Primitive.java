@@ -23,6 +23,38 @@ public class Primitive implements Parameter {
         this.value = value;
     }
     
+    // Constructor for Integer values
+    public Primitive(int value) {
+        this.value = value;
+    }
+    
+    // Constructor for Double values
+    public Primitive(double value) {
+        this.value = value;
+    }
+    
+    // Override the isInteger method from Parameter interface
+    @Override
+    public boolean isInteger() {
+        return getValue() instanceof Integer;
+    }
+    
+    // Override the isDouble method from Parameter interface
+    @Override
+    public boolean isDouble() {
+        return getValue() instanceof Double;
+    }
+
+    // Make sure getDoubleValue handles both Integer and Double values
+    @Override
+    public double getDoubleValue() {
+        Object val = getValue();
+        if (val instanceof Number) {
+            return ((Number) val).doubleValue();
+        }
+        throw new UnsupportedOperationException("Primitive value cannot be converted to double");
+    }
+    
     @Override
     public String getName() {
         return null; // Anonymous parameter has no name

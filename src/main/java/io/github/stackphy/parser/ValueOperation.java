@@ -22,15 +22,32 @@ public class ValueOperation extends AbstractOperation {
         this.value = value;
     }
 
-    
-    @Override
-    public void execute(Stack stack, Environment env) throws StackPhyException {
-        try {
-            stack.push(new Primitive(value));
-        } catch (IllegalArgumentException e) {
-            throw new StackPhyException("Invalid value: " + e.getMessage(), e, line, column);
-        }
+    // Constructor for Integer values
+    public ValueOperation(int value, int line, int column) {
+        super(line, column);
+        this.value = value;
     }
+    
+    // Constructor for Double values
+    public ValueOperation(double value, int line, int column) {
+        super(line, column);
+        this.value = value;
+    }
+    
+    // Make sure execute method preserves the type
+    @Override
+    public void execute(Stack stack, Environment env) {
+        // Create the appropriate Primitive based on value type
+        if (value instanceof Integer) {
+            stack.push(new Primitive((Integer) value));
+        } else if (value instanceof Double) {
+            stack.push(new Primitive((Double) value));
+        } else if (value instanceof String) {
+            stack.push(new Primitive((String) value));
+        } else {
+            stack.push(new Primitive(value));
+        }
+    }    
     
     /**
      * Gets the value.
@@ -43,6 +60,8 @@ public class ValueOperation extends AbstractOperation {
     
     @Override
     public String toString() {
-        return String.format("Value(%s)", value);
+        System.out.println("toString called on ValueOperation with value: " + value + 
+                   " (Type: " + (value != null ? value.getClass().getName() : "null") + ")");
+        return "Value(" + value + ")";
     }
 }
